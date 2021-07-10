@@ -3,8 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SiteModule } from './site/site.module';
-import { TextsService } from './texts/texts.service';
-import { ImagesService } from './images/images.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -13,7 +11,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       envFilePath: [`.env.stage.${process.env.STAGE}`],
       // isGlobal: true,
     }),
-    SiteModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -27,8 +24,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         autoLoadEntities: true,
       }),
     }),
+    SiteModule,
   ],
   controllers: [AppController],
-  providers: [AppService, TextsService, ImagesService],
+  providers: [AppService],
 })
 export class AppModule {}

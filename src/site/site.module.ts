@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TextsService } from '../texts/texts.service';
-import { ImagesService } from '../images/images.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { SiteController } from './site.controller';
+import { SiteService } from './site.service';
+import { Text } from './texts/text.entity';
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Text])],
+  providers: [SiteService],
   controllers: [SiteController],
-  providers: [TextsService, ImagesService],
 })
 export class SiteModule {}

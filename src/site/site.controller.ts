@@ -1,13 +1,21 @@
-import { Controller } from '@nestjs/common';
-import { TextsService } from '../texts/texts.service';
-import { ImagesService } from '../images/images.service';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { SiteService } from './site.service';
+import { CreateTextDto } from './texts/dto/create-text.dto';
+import { Text } from './texts/text.entity';
 
 @Controller('site')
 export class SiteController {
   constructor(
-    private textsService: TextsService,
-    private imagesService: ImagesService,
+    private siteService: SiteService,
   ) {}
 
-  //
+  @Get('/texts')
+  getTexts() {
+    return this.siteService.getTexts();
+  }
+
+  @Post('/texts')
+  createText(@Body() createTextDto: CreateTextDto): Promise<Text> {
+    return this.siteService.createText(createTextDto);
+  }
 }
