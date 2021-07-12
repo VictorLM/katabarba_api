@@ -1,6 +1,6 @@
 import { Entity, Column, ObjectIdColumn } from 'typeorm';
 
-@Entity({name: "texts"})
+@Entity({name: 'texts'})
 export class Text {
   @ObjectIdColumn()
   _id: string;

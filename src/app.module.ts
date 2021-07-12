@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SiteModule } from './site/site.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         type: 'mongodb',
-        url: configService.get('MONGODB_URL'),
+        url: configService.get<string>('MONGODB_URL'),
         synchronize: true,
         useUnifiedTopology: true,
         useNewUrlParser: true,
@@ -25,6 +26,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
     SiteModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
