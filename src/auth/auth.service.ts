@@ -1,8 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { MongoRepository } from 'typeorm';
 import { SignUpDto } from './dto/sign-up.dto';
-import { User } from './user.entity';
+import { Model } from 'mongoose';
+import { User, UserDocument } from '../users/models/user.schema';
 import {
   ConflictException,
   InternalServerErrorException,
@@ -11,37 +10,39 @@ import * as bcrypt from 'bcrypt';
 import { SignInDto } from './dto/sign-in.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './jwt-payload.interface';
-import { v4 as uuidV4 } from 'uuid';
+import { InjectModel } from '@nestjs/mongoose';
+
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: MongoRepository<User>,
+    @InjectModel(User.name) private usersModel: Model<UserDocument>,
     private jwtService: JwtService,
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<void> {
-    const { email, password, name, cpf } = signUpDto;
+    const { email, password, name, cpf, phone } = signUpDto;
 
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = this.usersRepository.create({
-      id: uuidV4(),
+    const newUser = new this.usersModel({
       email,
       password: hashedPassword,
       name,
-      cpf,
+      cpf, // TODO - CPF único?
+      phone,
     });
 
     try {
-      await this.usersRepository.save(user);
+      await newUser.save();
+
     } catch (error) {
       if (error.code === 11000) {
         // duplicate email
         throw new ConflictException('Email já cadastrado');
       } else {
+        console.log(error);
         throw new InternalServerErrorException();
       }
     }
@@ -49,7 +50,8 @@ export class AuthService {
 
   async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
     const { email, password } = signInDto;
-    const user = await this.usersRepository.findOne({ email });
+
+    const user = await this.usersModel.findOne({ email });
 
     if (user && (await bcrypt.compare(password, user.password))) {
       const payload: JwtPayload = { email };
@@ -60,5 +62,4 @@ export class AuthService {
     }
   }
 
-  // delete user - TODO
 }

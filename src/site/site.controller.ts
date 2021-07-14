@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { SiteService } from './site.service';
 import { CreateTextDto } from './texts/dto/create-text.dto';
-import { Text } from './texts/text.entity';
+import { Text } from './texts/text.schema';
 
 @Controller('site')
 export class SiteController {

@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { SiteController } from './site.controller';
 import { SiteService } from './site.service';
-import { Text } from './texts/text.entity';
+import { Text, TextSchema } from './texts/text.schema';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Text])],
+  imports: [MongooseModule.forFeature([
+    { name: Text.name, schema: TextSchema },
+  ]),],
   providers: [SiteService],
   controllers: [SiteController],
 })

@@ -1,30 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { CreateTextDto } from '../site/texts/dto/create-text.dto';
-import { Text } from '../site/texts/text.entity';
-import { MongoRepository } from 'typeorm';
+import { Text, TextDocument } from './texts/text.schema';
 
 @Injectable()
 export class SiteService {
 
   constructor(
-    @InjectRepository(Text)
-    private readonly textRepository: MongoRepository<Text>,
+    @InjectModel(Text.name) private textsModel: Model<TextDocument>,
   ) {}
 
   async getTexts(): Promise<Text[]> {
-    return this.textRepository.find();
+    return this.textsModel.find().exec();
   }
 
   async createText(createTextDto: CreateTextDto): Promise<Text> {
     const { section, title, text } = createTextDto;
-    const newText = this.textRepository.create({
+
+    const newText = new this.textsModel({
       section,
       title,
       text,
     });
 
-    return this.textRepository.save(newText);
+    return newText.save();
   }
 
 }
