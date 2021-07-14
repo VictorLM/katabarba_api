@@ -21,7 +21,8 @@ import { OrdersModule } from './orders/orders.module';
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
         useCreateIndex: true,
-        useNewUrlParser: true
+        useNewUrlParser: true,
+        useUnifiedTopology: true
       }),
     }),
     SiteModule,

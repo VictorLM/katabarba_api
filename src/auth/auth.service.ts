@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { SignUpDto } from './dto/sign-up.dto';
+import { SignUpDto } from '../users/dto/user.dto';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../users/models/user.schema';
 import {
@@ -51,7 +51,7 @@ export class AuthService {
   async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
     const { email, password } = signInDto;
 
-    const user = await this.usersModel.findOne({ email });
+    const user = await this.usersModel.findOne({ email }).select('+password').exec();
 
     if (user && (await bcrypt.compare(password, user.password))) {
       const payload: JwtPayload = { email };

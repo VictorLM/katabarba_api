@@ -2,11 +2,12 @@ import { IsString, IsEmail, MaxLength, MinLength } from 'class-validator';
 
 export class SignInDto {
   @IsEmail({}, { message: 'Email inválido' })
-  @MaxLength(50, { message: 'Tamanho máximo permitido de $constraint1 caracteres' })
-  email: string;
+  @MinLength(6, { message: 'Email deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(50, { message: 'Email deve ter no máximo $constraint1 caracteres' })
+  readonly email: string;
 
-  @IsString()
-  @MinLength(6, { message: 'Tamanho mínimo permitido de $constraint1 caracteres' })
-  @MaxLength(32, { message: 'Tamanho máximo permitido de $constraint1 caracteres' })
-  password: string;
+  @IsString({ message: 'Senha deve conter apenas caracteres comuns' })
+  @MinLength(6, { message: 'Senha deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(32, { message: 'Senha deve ter no máximo $constraint1 caracteres'})
+  readonly password: string;
 }
