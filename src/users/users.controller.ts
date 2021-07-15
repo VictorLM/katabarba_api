@@ -1,22 +1,61 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { UserBaseDto } from './dto/user.dto';
-// import { AddressCreateDto } from './dto/address-create.dto';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { AddressDto } from './dto/address.dto';
+import { ChangeUserPasswordDto, UserBaseDto } from './dto/user.dto';
+import { GetUser } from './get-user.decorator';
+import { AddressDocument } from './models/address.schema';
 import { UserDocument } from './models/user.schema';
 import { UsersService } from './users.service';
 
 @Controller('users')
+@UseGuards(AuthGuard())
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  @Post('/update')
-  updateUser(@Body() userBaseDto: UserBaseDto): Promise<UserDocument> {
-    return this.usersService.updateUser(userBaseDto, '60ef2bee1a4a98192ca72667');
+  //USERS
+
+  @Get('/')
+  getUser(@GetUser() user: UserDocument): Promise<UserDocument> {
+    return this.usersService.getUserById(user._id);
   }
 
-  // @Post('/signup')
-  // signUp(@Body() signUpDto: SignUpDto): Promise<void> {
-  //   return this.usersService.signUp(signUpDto);
-  // }
+  @Patch('/update') // TODO - If mudar o ID do user na req.user? Testar
+  updateUser(
+    @Body() userBaseDto: UserBaseDto,
+    @GetUser() user: UserDocument
+  ): Promise<UserDocument> {
+    return this.usersService.updateUser(userBaseDto, user);
+  }
 
-  // delete user - TODO? - Se não tiver, é dark pattern - Desativar?
+  @Patch('/update-password') // TODO - If mudar o ID do user na req.user? Testar
+  updateUserPassword(
+    @Body() changeUserPasswordDto: ChangeUserPasswordDto,
+    @GetUser() user: UserDocument
+  ): Promise<void> {
+    return this.usersService.updateUserPassword(changeUserPasswordDto, user);
+  }
+
+  // ADDRESSES
+
+  @Get('/address')
+  getAddressByUser(@GetUser() user: UserDocument): Promise<AddressDocument> {
+    return this.usersService.getAddressByUser(user);
+  }
+
+  @Post('/address')
+  createAddress(
+    @Body() addressDto: AddressDto,
+    @GetUser() user: UserDocument
+  ): Promise<AddressDocument> {
+    return this.usersService.createAddress(addressDto, user);
+  }
+
+  @Patch('/address')
+  updateAddress(
+    @Body() addressDto: AddressDto,
+    @GetUser() user: UserDocument
+  ): Promise<AddressDocument> {
+    return this.usersService.updateAddress(addressDto, user);
+  }
+
 }

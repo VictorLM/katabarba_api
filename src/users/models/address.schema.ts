@@ -22,7 +22,7 @@ export class Address {
   state: string;
 
   @Prop({ required: true })
-  zip: number;
+  zip: string;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId, ref: 'User',

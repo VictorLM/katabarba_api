@@ -43,14 +43,13 @@ export class AuthService {
         throw new ConflictException('Email já cadastrado');
       } else {
         console.log(error);
-        throw new InternalServerErrorException();
+        throw new InternalServerErrorException('Erro ao cadastrar usuário. Por favor, tente novamente mais tarde');
       }
     }
   }
 
   async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
     const { email, password } = signInDto;
-
     const user = await this.usersModel.findOne({ email }).select('+password').exec();
 
     if (user && (await bcrypt.compare(password, user.password))) {

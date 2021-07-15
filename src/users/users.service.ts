@@ -1,10 +1,17 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-// import { AddressCreateDto } from './dto/address-create.dto';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { AddressDto } from './dto/address.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './models/user.schema';
 import { Address, AddressDocument } from './models/address.schema';
-import { UserBaseDto } from './dto/user.dto';
+import { ChangeUserPasswordDto, UserBaseDto } from './dto/user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -12,6 +19,8 @@ export class UsersService {
     @InjectModel(User.name) private usersModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressesModel: Model<AddressDocument>,
   ) {}
+
+  // USERS
 
   async getUserById(id: string): Promise<UserDocument> {
     const found = await this.usersModel.findById(id);
@@ -21,19 +30,33 @@ export class UsersService {
     return found;
   }
 
-  async updateUser(userBaseDto: UserBaseDto, id: string): Promise<UserDocument> {
+  async getUserByIdWithPassword(id: string): Promise<UserDocument> {
+    const found = await this.usersModel.findById(id).select('+password').exec();
+    if (!found) {
+      throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
+    }
+    return found;
+  }
+
+  async updateUser(
+    userBaseDto: UserBaseDto,
+    user: UserDocument,
+  ): Promise<UserDocument> {
     const { cpf, email, name, phone } = userBaseDto;
+    // TODO - Atualizar req.user logo depois de atualizar o user
     try {
       const updatedUser = await this.usersModel.findOneAndUpdate(
-        { _id: id },{
+        { _id: user._id },
+        {
           email,
           name,
           cpf,
-          phone
-        },{
+          phone,
+        },
+        {
           new: true,
-          useFindAndModify: false
-        }
+          useFindAndModify: false,
+        },
       );
       return updatedUser;
     } catch (error) {
@@ -42,32 +65,94 @@ export class UsersService {
         throw new ConflictException('Email já cadastrado');
       } else {
         console.log(error);
-        throw new InternalServerErrorException();
+        throw new InternalServerErrorException(
+          'Erro ao alterar usuário. Por favor, tente novamente mais tarde',
+        );
       }
+    }
+  }
+
+  async updateUserPassword(
+    changeUserPasswordDto: ChangeUserPasswordDto,
+    user: UserDocument,
+  ): Promise<void> {
+    // TODO - TESTARRRR POR CONTA DO JWT E PASSPORT - Revalidar token?
+    // REDIRECT LOGIN FRONT?
+    const foundUser = await this.getUserByIdWithPassword(user._id);
+    const { currentPassword, newPassword } = changeUserPasswordDto;
+
+    if (await bcrypt.compare(currentPassword, foundUser.password)) {
+      const salt = await bcrypt.genSalt();
+      foundUser.password = await bcrypt.hash(newPassword, salt);
+
+      try {
+        await foundUser.save();
+      } catch (error) {
+        console.log(error);
+        throw new InternalServerErrorException(
+          'Erro ao alterar senha. Por favor, tente novamente mais tarde',
+        );
+      }
+    } else {
+      throw new UnauthorizedException('Senha Atual inválida');
+    }
+  }
+
+  // ADDRESSES
+
+  async getAddressByUser(user: UserDocument): Promise<AddressDocument> {
+    // IF EMPTY? No front, redirect para cadastro endereço?
+    return await this.addressesModel.findOne({ user: user._id }).exec();
+    // Não retornando 404 por que o user não tem address ao ser criado
+  }
+
+  async createAddress(
+    addressDto: AddressDto,
+    user: UserDocument,
+  ): Promise<AddressDocument> {
+    const foundUser = await this.getUserById(user._id);
+    const foundAddress = await this.getAddressByUser(user);
+
+    if(!foundAddress) {
+      const { street, number, complement, city, state, zip } = addressDto;
+      const newAddress = new this.addressesModel({
+        street,
+        number,
+        city,
+        complement,
+        state,
+        zip,
+        user: foundUser._id,
+      });
+      return await newAddress.save();
+
+    } else {
+      throw new ConflictException('Usuário já tem endereço cadastrado');
+    }
+  }
+
+  async updateAddress(
+    addressDto: AddressDto,
+    user: UserDocument,
+  ): Promise<AddressDocument> {
+    const foundUser = await this.getUserById(user._id);
+    const foundAddress = await this.getAddressByUser(foundUser);
+
+    if(foundAddress) {
+      const { street, number, complement, city, state, zip } = addressDto;
+
+      foundAddress.street = street;
+      foundAddress.number = number;
+      foundAddress.city = city;
+      foundAddress.complement = complement;
+      foundAddress.state = state;
+      foundAddress.zip = zip;
+
+      return await foundAddress.save();
+
+    } else {
+      throw new NotFoundException(`Nenhum endereço encontrado para o Usuário com ID "${user._id}"`);
     }
 
   }
-
-  async updateUserPassword(): Promise<void> {
-    // isolar função hash bcrypt num utility
-  }
-
-  // async test(addressCreateDto: AddressCreateDto): Promise<void> {
-  //   const user = await this.getUserById('60ee2d0487ce7b0388d0be5f');
-  //   console.log(user);
-  //   const { street, number, complement, city, state, zip } = addressDto;
-
-  //   const address = new this.addressesModel({
-  //     street,
-  //     number,
-  //     city,
-  //     complement,
-  //     state,
-  //     zip,
-  //     user: user._id,
-  //   });
-
-  //   await address.save();
-  // }
-
 }

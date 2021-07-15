@@ -32,3 +32,15 @@ export class SignUpDto extends UserBaseDto {
   @MaxLength(32, { message: 'Senha deve ter no máximo $constraint1 caracteres'})
   readonly password: string;
 }
+
+export class ChangeUserPasswordDto {
+  @IsString({ message: 'Senha Atual deve conter apenas caracteres comuns' })
+  @MinLength(6, { message: 'Senha Atual deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(32, { message: 'Senha Atual deve ter no máximo $constraint1 caracteres'})
+  readonly currentPassword: string;
+
+  @IsString({ message: 'Nova Senha deve conter apenas caracteres comuns' })
+  @MinLength(6, { message: 'Nova Senha deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(32, { message: 'Nova Senha deve ter no máximo $constraint1 caracteres'})
+  readonly newPassword: string;
+}

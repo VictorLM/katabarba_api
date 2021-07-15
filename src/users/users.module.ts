@@ -4,9 +4,11 @@ import { UsersController } from './users.controller';
 import { Address, AddressSchema } from './models/address.schema';
 import { User, UserSchema } from './models/user.schema';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Address.name, schema: AddressSchema },

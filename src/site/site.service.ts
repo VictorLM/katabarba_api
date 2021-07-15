@@ -6,7 +6,6 @@ import { Text, TextDocument } from './texts/text.schema';
 
 @Injectable()
 export class SiteService {
-
   constructor(
     @InjectModel(Text.name) private textsModel: Model<TextDocument>,
   ) {}
