@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import * as mongoose from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { User } from './user.schema';
 
-export type AddressDocument = Address & mongoose.Document;
+export type AddressDocument = Address & Document;
 
 @Schema({ collection: 'addresses', timestamps: true })
 export class Address {
@@ -25,7 +25,7 @@ export class Address {
   zip: string;
 
   @Prop({
-    type: mongoose.Schema.Types.ObjectId, ref: 'User',
+    type: Types.ObjectId, ref: 'User',
     required: true,
   })
   user: User;

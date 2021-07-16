@@ -12,12 +12,14 @@ import { User, UserDocument } from './models/user.schema';
 import { Address, AddressDocument } from './models/address.schema';
 import { ChangeUserPasswordDto, UserBaseDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
+import { ChangesService } from '../changes/changes.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private usersModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressesModel: Model<AddressDocument>,
+    private changesService: ChangesService,
   ) {}
 
   // USERS
@@ -58,7 +60,16 @@ export class UsersService {
           useFindAndModify: false,
         },
       );
+      // Log changes
+      await this.changesService.createChange({
+        user: user._id,
+        collectionName: 'users',
+        type: 'User Update',
+        before: user
+      });
+      //
       return updatedUser;
+
     } catch (error) {
       if (error.code === 11000) {
         // duplicate email
@@ -80,6 +91,7 @@ export class UsersService {
     // REDIRECT LOGIN FRONT?
     const foundUser = await this.getUserByIdWithPassword(user._id);
     const { currentPassword, newPassword } = changeUserPasswordDto;
+    user.password = foundUser.password; // changes
 
     if (await bcrypt.compare(currentPassword, foundUser.password)) {
       const salt = await bcrypt.genSalt();
@@ -87,6 +99,14 @@ export class UsersService {
 
       try {
         await foundUser.save();
+        // Log changes
+        await this.changesService.createChange({
+          user: user._id,
+          collectionName: 'users',
+          type: 'User Password Update',
+          before: user
+        });
+        //
       } catch (error) {
         console.log(error);
         throw new InternalServerErrorException(
@@ -140,7 +160,14 @@ export class UsersService {
 
     if(foundAddress) {
       const { street, number, complement, city, state, zip } = addressDto;
-
+      // Log changes
+      await this.changesService.createChange({
+        user: user._id,
+        collectionName: 'addresses',
+        type: 'Address Update',
+        before: foundAddress
+      });
+      //
       foundAddress.street = street;
       foundAddress.number = number;
       foundAddress.city = city;
