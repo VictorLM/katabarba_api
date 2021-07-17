@@ -16,7 +16,8 @@ import { ChangesModule } from '../changes/changes.module';
       { name: Address.name, schema: AddressSchema },
     ]),
   ],
+  controllers: [UsersController],
   providers: [UsersService],
-  controllers: [UsersController]
+  exports: [UsersService]
 })
 export class UsersModule {}

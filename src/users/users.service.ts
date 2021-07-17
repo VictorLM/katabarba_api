@@ -126,6 +126,14 @@ export class UsersService {
     // Não retornando 404 por que o user não tem address ao ser criado
   }
 
+  async getAddressByUserAndErrorIfNotExists(user: UserDocument): Promise<AddressDocument> {
+    const found = await this.addressesModel.findOne({ user: user._id }).exec();
+    if (!found) {
+      throw new NotFoundException(`Usuário com ID "${user._id}" não tem endereço cadastrado`);
+    }
+    return found;
+  }
+
   async createAddress(
     addressDto: AddressDto,
     user: UserDocument,

@@ -29,7 +29,7 @@ export class AddressDto {
   readonly city: string;
 
   @IsEnum(AddressState, { message: 'Estado inválido' })
-  readonly state: string;
+  readonly state: AddressState;
 
   @IsString({ message: 'CEP deve conter apenas números' })
   @Length(8, 8, { message: 'CEP deve ter $constraint1 dígitos'})
