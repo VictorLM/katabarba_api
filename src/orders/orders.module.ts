@@ -4,18 +4,16 @@ import { OrdersController } from './orders.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './models/order.schema';
 import { UsersModule } from '../users/users.module';
-import { Product, ProductSchema } from '../products/models/product.schema';
 import { AuthModule } from '../auth/auth.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
     AuthModule,
     UsersModule,
+    ProductsModule,
     MongooseModule.forFeature([
       { name: Order.name, schema: OrderSchema },
-    ]),
-    MongooseModule.forFeature([
-      { name: Product.name, schema: ProductSchema },
     ]),
   ],
   providers: [OrdersService],

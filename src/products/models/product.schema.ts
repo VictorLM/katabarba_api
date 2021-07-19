@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { ProductDimensions } from './product-dimensions.type';
 
 export type ProductDocument = Product & Document;
 
@@ -16,6 +17,18 @@ export class Product {
 
   @Prop({ required: true })
   price: number;
+
+  @Prop({
+    type: ProductDimensions,
+    required: true,
+  })
+  dimensions: ProductDimensions; // L x W x H - centemiters
+
+  @Prop({ required: true })
+  weight: number; // Grams
+
+  @Prop({ required: false, default: null })
+  freeShipment: Date;
 
   @Prop({ required: true })
   stock: number;
