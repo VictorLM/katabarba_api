@@ -45,6 +45,9 @@ export class Order {
     default: OrderStatus.AWAITING_PAYMENT
   })
   status: OrderStatus;
+
+  @Prop({ required: false })
+  notes: string;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

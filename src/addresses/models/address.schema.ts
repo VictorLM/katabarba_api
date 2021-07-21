@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { AddressState } from './address-state.enum';
-import { User } from './user.schema';
+import { AddressState } from '../enums/address-state.enum';
+import { User } from '../../users/models/user.schema';
 
 export type AddressDocument = Address & Document;
 
@@ -13,7 +13,7 @@ export class Address {
   @Prop({ required: true })
   number: number;
 
-  @Prop()
+  @Prop({ required: false, default: null })
   complement: string;
 
   @Prop({ required: true })
@@ -26,7 +26,8 @@ export class Address {
   zip: string;
 
   @Prop({
-    type: Types.ObjectId, ref: 'User',
+    type: Types.ObjectId,
+    ref: 'User',
     required: true,
   })
   user: User;

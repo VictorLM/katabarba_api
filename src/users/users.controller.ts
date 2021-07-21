@@ -1,14 +1,18 @@
 import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { AddressDto } from './dto/address.dto';
-import { ChangeUserPasswordDto, UserBaseDto } from './dto/user.dto';
-import { GetUser } from './get-user.decorator';
-import { AddressDocument } from './models/address.schema';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { AddressDto } from '../addresses/dtos/address.dto';
+import { ChangeUserPasswordDto, UserBaseDto } from './dtos/user.dto';
+import { GetUser } from './decorators/get-user.decorator';
+import { AddressDocument } from '../addresses/models/address.schema';
 import { UserDocument } from './models/user.schema';
 import { UsersService } from './users.service';
 
 @Controller('users')
-@UseGuards(AuthGuard())
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.CUSTOMER)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 

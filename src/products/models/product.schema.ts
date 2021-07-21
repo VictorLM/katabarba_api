@@ -25,7 +25,7 @@ export class Product {
   dimensions: ProductDimensions; // L x W x H - centemiters
 
   @Prop({ required: true })
-  weight: number; // Grams
+  weight: number; // Kilograms
 
   @Prop({ required: false, default: null })
   freeShipment: Date;

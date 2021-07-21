@@ -9,7 +9,9 @@ import { ChangesModule } from './changes/changes.module';
 import { UsersModule } from './users/users.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
-import { ShipmentModule } from './shipment/shipment.module';
+import { ShipmentsModule } from './shipments/shipments.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { CompaniesModule } from './companies/companies.module';
 
 @Module({
   imports: [
@@ -32,7 +34,9 @@ import { ShipmentModule } from './shipment/shipment.module';
     UsersModule,
     ProductsModule,
     OrdersModule,
-    ShipmentModule,
+    ShipmentsModule,
+    AddressesModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,7 +7,7 @@ import {
   MinLength,
   Length
 } from 'class-validator';
-import { AddressState } from '../models/address-state.enum';
+import { AddressState } from '../enums/address-state.enum';
 
 export class AddressDto {
   @IsString({ message: 'Rua deve conter apenas caracteres comuns' })

@@ -1,24 +1,29 @@
 import {
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AddressDto } from './dto/address.dto';
+import { AddressDto } from '../addresses/dtos/address.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './models/user.schema';
-import { Address, AddressDocument } from './models/address.schema';
-import { ChangeUserPasswordDto, UserBaseDto } from './dto/user.dto';
-import * as bcrypt from 'bcrypt';
+import { Address, AddressDocument } from '../addresses/models/address.schema';
+import { ChangeUserPasswordDto, SignUpDto, UserBaseDto } from './dtos/user.dto';
 import { ChangesService } from '../changes/changes.service';
+import { Role } from '../auth/enums/role.enum';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private usersModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressesModel: Model<AddressDocument>,
+    @Inject(forwardRef(() => AuthService))
+    private authService: AuthService,
     private changesService: ChangesService,
   ) {}
 
@@ -38,6 +43,39 @@ export class UsersService {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
     return found;
+  }
+
+  // Método usado no AuthController e JWTStrategy
+  async getUserByEmailWithPassword(email: string): Promise<UserDocument> {
+    return await this.usersModel.findOne({ email }).select('+password');
+  }
+
+  // Método usado no AuthController
+  async createUser(signUpDto: SignUpDto): Promise<void> {
+    const { email, name, password, cpf, phone } = signUpDto;
+    const hashedPassword = await this.authService.hashPassword(password);
+
+    const newUser = new this.usersModel({
+      email,
+      password: hashedPassword,
+      name,
+      cpf, // TODO - CPF único?
+      phone,
+      roles: [Role.CUSTOMER], // Os admin eu seto o role direto no DB
+    });
+
+    try {
+      await newUser.save();
+
+    } catch (error) {
+      if (error.code === 11000) {
+        // duplicate email - MongoDB
+        throw new ConflictException('Email já cadastrado por outro usuário');
+      } else {
+        console.log(error);
+        throw new InternalServerErrorException('Erro ao cadastrar usuário. Por favor, tente novamente mais tarde');
+      }
+    }
   }
 
   async updateUser(
@@ -93,9 +131,9 @@ export class UsersService {
     const { currentPassword, newPassword } = changeUserPasswordDto;
     user.password = foundUser.password; // changes
 
-    if (await bcrypt.compare(currentPassword, foundUser.password)) {
-      const salt = await bcrypt.genSalt();
-      foundUser.password = await bcrypt.hash(newPassword, salt);
+    if (await this.authService.passwordCompare(currentPassword, foundUser.password)) {
+
+      foundUser.password = await this.authService.hashPassword(newPassword);
 
       try {
         await foundUser.save();
@@ -130,6 +168,14 @@ export class UsersService {
     const found = await this.addressesModel.findOne({ user: user._id }).exec();
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${user._id}" não tem endereço cadastrado`);
+    }
+    return found;
+  }
+
+  protected async getAddressById(id: string): Promise<AddressDocument> {
+    const found = await this.addressesModel.findById(id);
+    if (!found) {
+      throw new NotFoundException(`Endereço com ID "${id}" não encontrado`);
     }
     return found;
   }

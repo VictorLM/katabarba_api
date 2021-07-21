@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { AddressDocument } from '../../users/models/address.schema';
+import { AddressDocument } from '../../addresses/models/address.schema';
 
 export enum ShippingCompanies { // Por enquanto só Correios
   CORREIOS = 'CORREIOS',

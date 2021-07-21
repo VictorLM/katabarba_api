@@ -2,17 +2,14 @@ import { BadRequestException, Injectable, InternalServerErrorException } from '@
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProductsService } from '../products/products.service';
-import { AddressDocument } from '../users/models/address.schema';
+import { AddressDocument } from '../addresses/models/address.schema';
 import { UserDocument } from '../users/models/user.schema';
 import { UsersService } from '../users/users.service';
-import {
-  CreateOrderDto,
-  ProductOrderType,
-  ProductFullOrderType,
-} from './dto/order.dto';
+import { ProductOrder, ProductFullOrder } from '../products/dtos/product.dto';
 import { OrderStatus } from './models/order-status.enum';
 import { Order, OrderDocument } from './models/order.schema';
 import { Shipment, ShippingCompanies, ShippingTypes } from './models/shipment.type';
+import { CreateOrderDto } from './dtos/order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -39,6 +36,7 @@ export class OrdersService {
     // Check array unique productIds
     const { shippingCompany, shippingType } = createOrderDto;
     const shipment = await this.getOrderShipment(products, foundUserAddress, shippingCompany, shippingType);
+    ///////////////// FAZER PAYMENT MODEL SEPARADO
     // const totalPrice = this.getOrderTotalPrice(products, shipment);
 
     // const newOrder = new this.ordersModel({
@@ -62,9 +60,9 @@ export class OrdersService {
   }
 
   async getOrderProductsById(
-    productsIds: ProductOrderType[],
-  ): Promise<ProductFullOrderType[]> {
-    const products: ProductFullOrderType[] = await Promise.all(
+    productsIds: ProductOrder[],
+  ): Promise<ProductFullOrder[]> {
+    const products: ProductFullOrder[] = await Promise.all(
       productsIds.map(async (product) => ({
         product: await this.productsService.getProductById(product.productId),
         quantity: product.quantity,
@@ -74,7 +72,7 @@ export class OrdersService {
     return products;
   }
 
-  checkProductAvailability(orderProduct: ProductFullOrderType) {
+  checkProductAvailability(orderProduct: ProductFullOrder) {
     if(!orderProduct.product.available){
       throw new BadRequestException(`Produto "${orderProduct.product.name}" indisponível`);
     }
@@ -86,7 +84,7 @@ export class OrdersService {
   }
 
   async getOrderShipment( // DEPLOY SHIPMENT MODULEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-    products: ProductFullOrderType[],
+    products: ProductFullOrder[],
     userAddress: AddressDocument,
     shippingCompany: ShippingCompanies,
     shippingType: ShippingTypes
@@ -109,7 +107,7 @@ export class OrdersService {
   }
 
   getOrderTotalPrice(
-    orderProducts: ProductFullOrderType[],
+    orderProducts: ProductFullOrder[],
     shippingTax: number
   ) {
     //
