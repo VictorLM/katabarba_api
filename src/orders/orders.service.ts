@@ -24,7 +24,7 @@ export class OrdersService {
     user: UserDocument,
   ): Promise<void> {
     const foundUser = await this.usersService.getUserById(user._id);
-    const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
+    // const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
     const products = await this.getOrderProductsById(createOrderDto.products);
 
     products.forEach(product => this.checkProductAvailability(product));
@@ -35,7 +35,7 @@ export class OrdersService {
     // SCHEDULE JOB - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
     // Check array unique productIds
     const { shippingCompany, shippingType } = createOrderDto;
-    const shipment = await this.getOrderShipment(products, foundUserAddress, shippingCompany, shippingType);
+    // const shipment = await this.getOrderShipment(products, foundUserAddress, shippingCompany, shippingType);
     ///////////////// FAZER PAYMENT MODEL SEPARADO
     // const totalPrice = this.getOrderTotalPrice(products, shipment);
 

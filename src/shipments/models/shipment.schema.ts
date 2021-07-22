@@ -2,7 +2,9 @@ import { Prop,  Schema, SchemaFactory,  } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Order } from '../../orders/models/order.schema';
 import { Address, AddressDocument } from '../../addresses/models/address.schema';
-import { ShipmentStatus, ShippingCompanies, ShippingTypes } from './shipment.types';
+import { ShippingCompanies } from '../enums/shipping-companies.enum';
+import { ShippingTypes } from '../enums/shipping-types.enum';
+import { ShipmentStatus } from '../interfaces/shipping-status.interface';
 
 export type ShipmentDocument = Shipment & Document;
 

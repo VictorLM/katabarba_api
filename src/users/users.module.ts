@@ -5,7 +5,6 @@ import { User, UserSchema } from './models/user.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { ChangesModule } from '../changes/changes.module';
-import { Address, AddressSchema } from '../addresses/models/address.schema';
 
 @Module({
   imports: [
@@ -13,7 +12,6 @@ import { Address, AddressSchema } from '../addresses/models/address.schema';
     ChangesModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
-      { name: Address.name, schema: AddressSchema },
     ]),
   ],
   controllers: [UsersController],

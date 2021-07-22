@@ -13,7 +13,7 @@ export class Address {
   @Prop({ required: true })
   number: number;
 
-  @Prop({ required: false, default: null })
+  @Prop({ required: false })
   complement: string;
 
   @Prop({ required: true })

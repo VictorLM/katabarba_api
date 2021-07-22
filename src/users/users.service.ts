@@ -7,11 +7,9 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AddressDto } from '../addresses/dtos/address.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './models/user.schema';
-import { Address, AddressDocument } from '../addresses/models/address.schema';
 import { ChangeUserPasswordDto, SignUpDto, UserBaseDto } from './dtos/user.dto';
 import { ChangesService } from '../changes/changes.service';
 import { Role } from '../auth/enums/role.enum';
@@ -21,7 +19,6 @@ import { AuthService } from '../auth/auth.service';
 export class UsersService {
   constructor(
     @InjectModel(User.name) private usersModel: Model<UserDocument>,
-    @InjectModel(Address.name) private addressesModel: Model<AddressDocument>,
     @Inject(forwardRef(() => AuthService))
     private authService: AuthService,
     private changesService: ChangesService,
@@ -156,84 +153,4 @@ export class UsersService {
     }
   }
 
-  // ADDRESSES
-
-  async getAddressByUser(user: UserDocument): Promise<AddressDocument> {
-    // IF EMPTY? No front, redirect para cadastro endereço?
-    return await this.addressesModel.findOne({ user: user._id }).exec();
-    // Não retornando 404 por que o user não tem address ao ser criado
-  }
-
-  async getAddressByUserAndErrorIfNotExists(user: UserDocument): Promise<AddressDocument> {
-    const found = await this.addressesModel.findOne({ user: user._id }).exec();
-    if (!found) {
-      throw new NotFoundException(`Usuário com ID "${user._id}" não tem endereço cadastrado`);
-    }
-    return found;
-  }
-
-  protected async getAddressById(id: string): Promise<AddressDocument> {
-    const found = await this.addressesModel.findById(id);
-    if (!found) {
-      throw new NotFoundException(`Endereço com ID "${id}" não encontrado`);
-    }
-    return found;
-  }
-
-  async createAddress(
-    addressDto: AddressDto,
-    user: UserDocument,
-  ): Promise<AddressDocument> {
-    const foundUser = await this.getUserById(user._id);
-    const foundAddress = await this.getAddressByUser(user);
-
-    if(!foundAddress) {
-      const { street, number, complement, city, state, zip } = addressDto;
-      const newAddress = new this.addressesModel({
-        street,
-        number,
-        city,
-        complement,
-        state,
-        zip,
-        user: foundUser._id,
-      });
-      return await newAddress.save();
-
-    } else {
-      throw new ConflictException('Usuário já tem endereço cadastrado');
-    }
-  }
-
-  async updateAddress(
-    addressDto: AddressDto,
-    user: UserDocument,
-  ): Promise<AddressDocument> {
-    const foundUser = await this.getUserById(user._id);
-    const foundAddress = await this.getAddressByUser(foundUser);
-
-    if(foundAddress) {
-      const { street, number, complement, city, state, zip } = addressDto;
-      // Log changes
-      await this.changesService.createChange({
-        user: user._id,
-        collectionName: 'addresses',
-        type: 'Address Update',
-        before: foundAddress
-      });
-      //
-      foundAddress.street = street;
-      foundAddress.number = number;
-      foundAddress.city = city;
-      foundAddress.complement = complement;
-      foundAddress.state = state;
-      foundAddress.zip = zip;
-
-      return await foundAddress.save();
-
-    } else {
-      throw new NotFoundException(`Nenhum endereço encontrado para o Usuário com ID "${user._id}"`);
-    }
-
-  }
 }
