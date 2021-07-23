@@ -25,7 +25,7 @@ export class OrdersService {
   ): Promise<void> {
     const foundUser = await this.usersService.getUserById(user._id);
     // const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
-    const products = await this.getOrderProductsById(createOrderDto.products);
+    const products = await this.productsService.getProductsAndQuantitiesById(createOrderDto.products);
 
     products.forEach(product => this.checkProductAvailability(product));
 
@@ -57,19 +57,6 @@ export class OrdersService {
     //   console.log(error);
     //   throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
     // }
-  }
-
-  async getOrderProductsById(
-    productsIds: ProductOrder[],
-  ): Promise<ProductFullOrder[]> {
-    const products: ProductFullOrder[] = await Promise.all(
-      productsIds.map(async (product) => ({
-        product: await this.productsService.getProductById(product.productId),
-        quantity: product.quantity,
-      })),
-    );
-
-    return products;
   }
 
   checkProductAvailability(orderProduct: ProductFullOrder) {

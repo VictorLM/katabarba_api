@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
 import { Product, ProductDocument } from './models/product.schema';
 
 @Injectable()
@@ -25,6 +26,19 @@ export class ProductsService {
       throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
     }
     return found;
+  }
+
+  async getProductsAndQuantitiesById(
+    productsIds: ProductOrder[],
+  ): Promise<ProductFullOrder[]> {
+    const products: ProductFullOrder[] = await Promise.all(
+      productsIds.map(async (product) => ({
+        product: await this.getProductById(product.productId),
+        quantity: product.quantity,
+      })),
+    );
+
+    return products;
   }
 
   async getProducInStockAndAvailabilitytById(id: string): Promise<ProductDocument> {

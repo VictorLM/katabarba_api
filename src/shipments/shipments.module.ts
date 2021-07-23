@@ -5,11 +5,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Shipment } from '../orders/models/shipment.type';
 import { ShipmentSchema } from './models/shipment.schema';
 import { CompaniesModule } from '../companies/companies.module';
-import { HttpModule } from '@nestjs/axios';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports:[
-    HttpModule,
+    ProductsModule,
     CompaniesModule,
     MongooseModule.forFeature([
       { name: Shipment.name, schema: ShipmentSchema },

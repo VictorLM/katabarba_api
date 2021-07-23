@@ -5,3 +5,17 @@ export class ProductDimensions {
   width: number;
   height: number;
 };
+
+export class OrderDimensions extends ProductDimensions {
+  constructor(
+    length: number,
+    width: number,
+    height: number,
+  ) {
+    super();
+    this.length = length;
+    this.width = width;
+    this.height = height;
+  }
+};
+
