@@ -5,12 +5,16 @@ import { CompaniesService } from '../companies/companies.service';
 import { PublicGetShipmentCostsDTO } from './dtos/shipment.dto';
 import { Shipment, ShipmentDocument } from './models/shipment.schema';
 import axios from 'axios';
+import { get } from 'lodash';
 import { parse } from 'fast-xml-parser';
 import { stringify } from 'query-string';
-import { axiosConfig, CorreiosParams, correiosWebServiceUrl, ServiceCodes } from './templates/correios-params';
-import { OrderDimensions } from '../products/models/product-dimensions.type';
+import { axiosCorreiosConfig, CorreiosParams, correiosWebServiceUrl, CorreiosServiceCodes } from './templates/correios-params';
 import { ProductsService } from '../products/products.service';
-import { ProductFullOrder } from '../products/dtos/product.dto';
+import { OrdersService } from '../orders/orders.service';
+import { ShipmentCostAndDeadline, ShipmentsCostsAndDeadlines } from './interfaces/shipping-costs.interface';
+import { ShippingTypes } from './enums/shipping-types.enum';
+import { OrderDimensions } from '../orders/interfaces/order-dimensions.interface';
+import { ShippingCompanies } from './enums/shipping-companies.enum';
 
 @Injectable()
 export class ShipmentsService {
@@ -18,63 +22,108 @@ export class ShipmentsService {
     @InjectModel(Shipment.name) private shipmentsModel: Model<ShipmentDocument>,
     private companiesService: CompaniesService,
     private productsService: ProductsService,
+    private ordersService: OrdersService,
   ) {}
 
-  async publicGetShipmentCosts( // TODO - Tratamento de erros
+  // TODO - DEFINIR FRETE MÍNIMO
+  async publicGetShipmentsCosts(
     publicGetShipmentCostsDTO: PublicGetShipmentCostsDTO
-  ): Promise<any> {
-    const { deliveryZipCode, products } = publicGetShipmentCostsDTO;
+  ): Promise<ShipmentsCostsAndDeadlines> {
+    const { deliveryZipCode, productsIdsAndQuanties } = publicGetShipmentCostsDTO;
     const originZipCode = await this.companiesService.getShiptCompanyZipCode();
 
-    const productsAndQuantities = await this.productsService.getProductsAndQuantitiesById(products);
-    // CHECAR DISPONIBILIDADE DOS PRODUTOS
+    const productsAndQuantities = await this.productsService.getProductsAndQuantitiesById(productsIdsAndQuanties);
 
-    // Migrar estas funções para o OrdersService
-    const orderDimensions = this.getOrderDimensions(productsAndQuantities);
-    const orderWeight = this.getOrderWeight(productsAndQuantities);
+    this.productsService.checkProductsStockAndAvailability(productsAndQuantities);
 
-    const params = new CorreiosParams(
-      ServiceCodes.PAC, // TODO
-      originZipCode,
-      deliveryZipCode,
-      orderDimensions,
-      String(orderWeight),
+    const orderDimensions = this.ordersService.getOrderDimensions(productsAndQuantities);
+    const orderWeight = this.ordersService.getOrderWeight(productsAndQuantities);
+
+    const shipmentCostsAndDeadlines = await this.getShipmentCostsAndDeadlines(
+      originZipCode, deliveryZipCode, orderDimensions, orderWeight
     );
 
-    try {
-      const response = await axios.post(correiosWebServiceUrl, stringify(params), axiosConfig);
+    return shipmentCostsAndDeadlines;
+  }
 
-      console.log('STATUS CODE: ', response.status);
-      const json = parse(response.data);
-      console.log(json);
-      return json;
+  async getShipmentCostsAndDeadlines(
+    originZipCode: string,
+    deliveryZipCode: string,
+    orderDimensions: OrderDimensions,
+    orderWeight: number,
+  ): Promise<ShipmentsCostsAndDeadlines> {
 
-    } catch (error) {
-      console.error(error);
+    const shipmentCostsAndDeadlinesFromCorreios = await this.getShipmentCostsAndDeadlinesFromCorreios(
+      originZipCode, deliveryZipCode, orderDimensions, orderWeight
+    );
+
+    const shipmentCostsAndDeadlines: ShipmentsCostsAndDeadlines = {
+      deliveryZipCode,
+      shipmentCostAndDeadlinePerCompany: [{
+        company: ShippingCompanies.CORREIOS,
+        shipmentCostsAndDeadlines: shipmentCostsAndDeadlinesFromCorreios,
+      }],
+    };
+
+    return shipmentCostsAndDeadlines;
+  }
+
+  // TODO - Tratamento de erros ///////////////////////////
+  async getShipmentCostsAndDeadlinesFromCorreios(
+    originZipCode: string,
+    deliveryZipCode: string,
+    orderDimensions: OrderDimensions,
+    orderWeight: number,
+  ): Promise<ShipmentCostAndDeadline[]> {
+
+    const shipmentCostsAndDeadlinesFromCorreios: ShipmentCostAndDeadline[] = [];
+
+    for (const code in CorreiosServiceCodes) {
+
+      const params = new CorreiosParams(
+        CorreiosServiceCodes[code],
+        originZipCode,
+        deliveryZipCode,
+        orderDimensions,
+        String(orderWeight),
+      );
+
+      try {
+        const response = await axios.post(correiosWebServiceUrl, stringify(params), axiosCorreiosConfig);
+        // console.log('STATUS CODE: ', response.status);
+        const parsedResponseData = parse(response.data);
+
+        shipmentCostsAndDeadlinesFromCorreios.push({
+          type: ShippingTypes['CORREIOS_' + code],
+          cost: parseFloat(get(parsedResponseData, 'cResultado.Servicos.cServico.Valor', 0).replace(/,/g, '.')),
+          deadline: Number(get(parsedResponseData, 'cResultado.Servicos.cServico.PrazoEntrega', 0)),
+        });
+
+      } catch (error) {
+
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.log(error.response.data);
+          console.log(error.response.status);
+          console.log(error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          // console.log(error.request);
+          console.log('WS Correios não responde');
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.log('Error', error.message);
+        }
+
+      }
+
     }
 
-  }
-
-  getOrderDimensions(productsAndQuantities: ProductFullOrder[]): OrderDimensions {
-    // Nesse caso, como é um produto apenas, estou apenas multiplicando a altura do pacote
-    // Pois serão enviados empilhados um sobre o outro
-    let height = 0;
-
-    // GET HIGHER LENGHT AND WIDTH - TODO
-    productsAndQuantities.forEach(product =>
-      height = height + (product.quantity * product.product.dimensions.height),
-    );
-
-    const orderDimensions = new OrderDimensions(30, 20, height);
-    return orderDimensions;
-  }
-
-  getOrderWeight(productsAndQuantities: ProductFullOrder[]): number {
-    let orderWeight = 0;
-    productsAndQuantities.forEach(product =>
-      orderWeight = orderWeight + (product.quantity * product.product.weight),
-    );
-    return Math.round(orderWeight * 100) / 100;
+    console.log(shipmentCostsAndDeadlinesFromCorreios);
+    return shipmentCostsAndDeadlinesFromCorreios;
   }
 
 }

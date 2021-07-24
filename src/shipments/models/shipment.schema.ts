@@ -27,8 +27,11 @@ export class Shipment {
   @Prop({ required: true })
   deliveryAddress: Types.DocumentArray<AddressDocument>;
 
-  @Prop({ required: false })
+  @Prop({ required: true })
   cost: number;
+
+  @Prop({ required: true })
+  deadline: number; // days
 
   @Prop({
     required: true,

@@ -8,7 +8,7 @@ export class ProductsIdsAndQuanties {
   @ArrayMinSize(1, { message: 'Pedido deve conter ao menos um Produto' })
   @ValidateNested({ each: true })
   @Type(() => ProductOrder)
-  readonly products: ProductOrder[];
+  readonly productsIdsAndQuanties: ProductOrder[];
 }
 
 class ProductQuantity{

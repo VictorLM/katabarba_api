@@ -1,9 +1,9 @@
 import { AxiosRequestConfig } from 'axios';
-import { OrderDimensions } from "../../products/models/product-dimensions.type";
+import { OrderDimensions } from '../../orders/interfaces/order-dimensions.interface';
 
 // https://www.correios.com.br/atendimento/ferramentas/sistemas/arquivos/manual-de-implementacao-do-calculo-remoto-de-precos-e-prazos
 
-export enum ServiceCodes {
+export enum CorreiosServiceCodes {
   PAC = '04510',
   SEDEX = '04014',
 }
@@ -11,7 +11,7 @@ export enum ServiceCodes {
 export class CorreiosParams {
   nCdEmpresa: string; // Código administrativo junto à ECT
   sDsSenha: string; // Senha para acesso ao serviço
-  nCdServico: ServiceCodes;
+  nCdServico: CorreiosServiceCodes;
   sCepOrigem: string; // Somente números, sem hífen // TODO - VALIDAR
   sCepDestino: string; // Somente números, sem hífen // TODO - VALIDAR
   nVlPeso: string; // Em Kg
@@ -26,7 +26,7 @@ export class CorreiosParams {
   // StrRetorno: string; // xml
 
   constructor(
-    serviceCode: ServiceCodes,
+    serviceCode: CorreiosServiceCodes,
     originZipCode: string,
     deliveryZipCode: string,
     dimensions: OrderDimensions,
@@ -52,8 +52,9 @@ export class CorreiosParams {
 
 export const correiosWebServiceUrl = 'http://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx/CalcPrecoPrazo';
 
-export const axiosConfig: AxiosRequestConfig = {
+export const axiosCorreiosConfig: AxiosRequestConfig = {
   responseType: 'text',
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded',
   }

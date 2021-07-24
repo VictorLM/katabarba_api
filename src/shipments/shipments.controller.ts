@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ProductOrder } from '../products/dtos/product.dto';
 import { PublicGetShipmentCostsDTO } from './dtos/shipment.dto';
+import { ShipmentsCostsAndDeadlines } from './interfaces/shipping-costs.interface';
 import { ShipmentsService } from './shipments.service';
 
 @Controller('shipments')
@@ -10,7 +10,7 @@ export class ShipmentsController {
   @Post('/')
   publicGetShipmentCosts(
     @Body() publicGetShipmentCostsDTO: PublicGetShipmentCostsDTO
-): Promise<void> {
-    return this.shipmentsService.publicGetShipmentCosts(publicGetShipmentCostsDTO);
+): Promise<ShipmentsCostsAndDeadlines> {
+    return this.shipmentsService.publicGetShipmentsCosts(publicGetShipmentCostsDTO);
   }
 }

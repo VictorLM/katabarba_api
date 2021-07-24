@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
@@ -48,4 +48,18 @@ export class ProductsService {
     }
     return found;
   }
+
+  checkProductsStockAndAvailability(products: ProductFullOrder[]) {
+    products.forEach(product => {
+      if(!product.product.available){
+        throw new BadRequestException(`Produto "${product.product.name}" indisponível`);
+      }
+      if(product.product.stock < product.quantity){
+        throw new BadRequestException(
+          `Sem estoque. Restam apenas "${product.product.stock}" unidades do produto "${product.product.name}" em estoque`
+        );
+      }
+    });
+  }
+
 }

@@ -24,6 +24,8 @@ export class Product {
   })
   dimensions: ProductDimensions; // L x W x H - centemiters
 
+  // TODO - Dimensões do produto em sí
+
   @Prop({ required: true })
   weight: number; // Kilograms
 

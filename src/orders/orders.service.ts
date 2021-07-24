@@ -10,6 +10,7 @@ import { OrderStatus } from './models/order-status.enum';
 import { Order, OrderDocument } from './models/order.schema';
 import { Shipment, ShippingCompanies, ShippingTypes } from './models/shipment.type';
 import { CreateOrderDto } from './dtos/order.dto';
+import { OrderDimensions } from './interfaces/order-dimensions.interface';
 
 @Injectable()
 export class OrdersService {
@@ -25,9 +26,9 @@ export class OrdersService {
   ): Promise<void> {
     const foundUser = await this.usersService.getUserById(user._id);
     // const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
-    const products = await this.productsService.getProductsAndQuantitiesById(createOrderDto.products);
+    const products = await this.productsService.getProductsAndQuantitiesById(createOrderDto.productsIdsAndQuanties);
 
-    products.forEach(product => this.checkProductAvailability(product));
+    this.productsService.checkProductsStockAndAvailability(products);
 
     // CORREIOS ENTREGA QUALQUER ENDEREÇO? IF ERROR
     // CHECAR ESTOQUE, DISPONIBILIDADE, VALOR, VALOR FRETE
@@ -59,18 +60,8 @@ export class OrdersService {
     // }
   }
 
-  checkProductAvailability(orderProduct: ProductFullOrder) {
-    if(!orderProduct.product.available){
-      throw new BadRequestException(`Produto "${orderProduct.product.name}" indisponível`);
-    }
-    if(orderProduct.product.stock < orderProduct.quantity){
-      throw new BadRequestException(
-        `Sem estoque. Restam apenas "${orderProduct.product.stock}" unidades do produto "${orderProduct.product.name}" em estoque`
-      );
-    }
-  }
-
-  async getOrderShipment( // DEPLOY SHIPMENT MODULEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  // MOVE TO SHIPMENTS SERVICE
+  async getOrderShipment( // DEPLOY SHIPMENT MODULE
     products: ProductFullOrder[],
     userAddress: AddressDocument,
     shippingCompany: ShippingCompanies,
@@ -91,6 +82,34 @@ export class OrdersService {
     console.log(shipment);
 
     return shipment;
+  }
+
+  getOrderDimensions(productsAndQuantities: ProductFullOrder[]): OrderDimensions {
+    // Nesse caso, como é um produto apenas, estou só multiplicando a altura do pacote
+    // Pois serão enviados empilhados um sobre o outro quando quantidade for maior que 1
+    let length = 0;
+    let width = 0;
+    let height = 0;
+
+    productsAndQuantities.forEach(product => {
+      // Pega o maior comprimento
+      length = length < product.product.dimensions.length ? product.product.dimensions.length : length;
+      // Pega a maior largura
+      width = width < product.product.dimensions.width ? product.product.dimensions.width : width;
+      // Soma as alturas
+      height = height + (product.quantity * product.product.dimensions.height);
+    });
+
+    const orderDimensions = new OrderDimensions(length, width, height);
+    return orderDimensions;
+  }
+
+  getOrderWeight(productsAndQuantities: ProductFullOrder[]): number {
+    let orderWeight = 0;
+    productsAndQuantities.forEach(product =>
+      orderWeight = orderWeight + (product.quantity * product.product.weight),
+    );
+    return Math.round(orderWeight * 100) / 100;
   }
 
   getOrderTotalPrice(
