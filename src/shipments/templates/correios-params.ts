@@ -1,5 +1,5 @@
 import { AxiosRequestConfig } from 'axios';
-import { OrderDimensions } from '../../orders/interfaces/order-dimensions.interface';
+import { OrderBoxDimensions } from '../../orders/interfaces/order-dimensions.interface';
 
 // https://www.correios.com.br/atendimento/ferramentas/sistemas/arquivos/manual-de-implementacao-do-calculo-remoto-de-precos-e-prazos
 
@@ -29,7 +29,7 @@ export class CorreiosParams {
     serviceCode: CorreiosServiceCodes,
     originZipCode: string,
     deliveryZipCode: string,
-    dimensions: OrderDimensions,
+    dimensions: OrderBoxDimensions,
     weight: string,
   ) {
     this.nCdEmpresa = '';

@@ -1,4 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { ProductDocument } from './models/product.schema';
 import { ProductsService } from './products.service';
 
@@ -17,12 +18,12 @@ export class ProductsController {
   }
 
   @Get('/:id')
-  getProductById(@Param('id') id: string): Promise<ProductDocument> {
+  getProductById(@Param('id') id: Types.ObjectId): Promise<ProductDocument> {
     return this.productsService.getProductById(id);
   }
 
   @Get('/:id/stock-availability')
-  getProducInStockAndAvailabilitytById(@Param('id') id: string): Promise<ProductDocument> {
+  getProducInStockAndAvailabilitytById(@Param('id') id: Types.ObjectId): Promise<ProductDocument> {
     return this.productsService.getProducInStockAndAvailabilitytById(id);
   }
 

@@ -1,6 +1,6 @@
-import { ProductDimensions } from "../../products/models/product-dimensions.type";
+import { ProductBoxDimensions } from "../../products/models/product-dimensions.interface";
 
-export class OrderDimensions extends ProductDimensions {
+export class OrderBoxDimensions extends ProductBoxDimensions {
   constructor(
     length: number,
     width: number,

@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 enum PaymentStatus {
   AWAITING = 'AWAITING',
   PAYED = 'PAYED',
@@ -5,7 +7,7 @@ enum PaymentStatus {
 }
 
 export class Payment {
-  id: string;
+  id: Types.ObjectId;
   status: PaymentStatus;
   statusDate: Date;
   method: string;

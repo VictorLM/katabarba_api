@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
 import { Product, ProductDocument } from './models/product.schema';
 
@@ -9,7 +9,7 @@ export class ProductsService {
   constructor(@InjectModel(Product.name) private productsModel: Model<ProductDocument>) {}
 
   async getAllProducts(): Promise<ProductDocument[]> {
-    return this.productsModel.find().exec();
+    return this.productsModel.find();
     // TODO - ORDER BY AVAILIBLE TRUE AND STOCK > 0
   }
 
@@ -17,11 +17,16 @@ export class ProductsService {
     return this.productsModel.find({
       available: true,
       stock: { $gt: 0 },
-    }).exec();
+    });
   }
 
-  async getProductById(id: string): Promise<ProductDocument> {
+  async getProductById(id: Types.ObjectId): Promise<ProductDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de produto "${id}" inválido`);
+    }
+
     const found = await this.productsModel.findById(id);
+
     if (!found) {
       throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
     }
@@ -41,8 +46,13 @@ export class ProductsService {
     return products;
   }
 
-  async getProducInStockAndAvailabilitytById(id: string): Promise<ProductDocument> {
+  async getProducInStockAndAvailabilitytById(id: Types.ObjectId): Promise<ProductDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de produto "${id}" inválido`);
+    }
+
     const found = await this.productsModel.findById(id).select('stock available');
+
     if (!found) {
       throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
     }

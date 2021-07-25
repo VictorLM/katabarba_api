@@ -5,7 +5,8 @@ import {
   IsOptional,
   IsEnum,
   MinLength,
-  Length
+  IsNotEmpty,
+  Matches
 } from 'class-validator';
 import { AddressState } from '../enums/address-state.enum';
 
@@ -31,7 +32,8 @@ export class AddressDto {
   @IsEnum(AddressState, { message: 'Estado inválido' })
   readonly state: AddressState;
 
-  @IsString({ message: 'CEP deve conter apenas números' })
-  @Length(8, 8, { message: 'CEP deve ter $constraint1 dígitos'})
-  readonly zip: string; // TODO - VALIDAR
+  @IsNotEmpty({ message: 'Campo CEP é obrigatório' })
+  @IsString({ message: 'Formato de CEP inválido' })
+  @Matches(/^[0-9]{8}$/, { message: 'CEP inválido' })
+  readonly zipCode: string;
 }

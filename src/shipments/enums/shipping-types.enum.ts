@@ -1,6 +1,9 @@
-export enum ShippingTypes {
+export enum ShippingTypesCorreios {
   // CORREIOS
-  CORREIOS_CARTA_REGISTRADA = 'CORREIOS_CARTA_REGISTRADA',
-  CORREIOS_PAC = 'CORREIOS_PAC',
-  CORREIOS_SEDEX = 'CORREIOS_SEDEX',
+  CARTA_REGISTRADA = 'CARTA_REGISTRADA',
+  PAC = 'PAC',
+  SEDEX = 'SEDEX',
 }
+
+// type ShippingTypes = ShippingTypesCorreios | otherCompanyShippingType;
+export type ShippingTypes = ShippingTypesCorreios;

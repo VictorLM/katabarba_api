@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CompaniesService } from '../companies/companies.service';
@@ -8,12 +8,17 @@ import axios from 'axios';
 import { get } from 'lodash';
 import { parse } from 'fast-xml-parser';
 import { stringify } from 'query-string';
-import { axiosCorreiosConfig, CorreiosParams, correiosWebServiceUrl, CorreiosServiceCodes } from './templates/correios-params';
+import {
+  axiosCorreiosConfig,
+  CorreiosParams,
+  correiosWebServiceUrl,
+  CorreiosServiceCodes
+} from './templates/correios-params';
 import { ProductsService } from '../products/products.service';
 import { OrdersService } from '../orders/orders.service';
 import { ShipmentCostAndDeadline, ShipmentsCostsAndDeadlines } from './interfaces/shipping-costs.interface';
-import { ShippingTypes } from './enums/shipping-types.enum';
-import { OrderDimensions } from '../orders/interfaces/order-dimensions.interface';
+import { ShippingTypesCorreios } from './enums/shipping-types.enum';
+import { OrderBoxDimensions } from '../orders/interfaces/order-dimensions.interface';
 import { ShippingCompanies } from './enums/shipping-companies.enum';
 
 @Injectable()
@@ -26,6 +31,7 @@ export class ShipmentsService {
   ) {}
 
   // TODO - DEFINIR FRETE MÍNIMO
+  // TODO - IF PRODUCT FREE SHIPMENT
   async publicGetShipmentsCosts(
     publicGetShipmentCostsDTO: PublicGetShipmentCostsDTO
   ): Promise<ShipmentsCostsAndDeadlines> {
@@ -46,10 +52,11 @@ export class ShipmentsService {
     return shipmentCostsAndDeadlines;
   }
 
+
   async getShipmentCostsAndDeadlines(
     originZipCode: string,
     deliveryZipCode: string,
-    orderDimensions: OrderDimensions,
+    orderDimensions: OrderBoxDimensions,
     orderWeight: number,
   ): Promise<ShipmentsCostsAndDeadlines> {
 
@@ -68,62 +75,93 @@ export class ShipmentsService {
     return shipmentCostsAndDeadlines;
   }
 
-  // TODO - Tratamento de erros ///////////////////////////
+
+  // TODO - DEPLOY SERVICE PARA REPORTAR A CADA ERRO LANÇADO
   async getShipmentCostsAndDeadlinesFromCorreios(
     originZipCode: string,
     deliveryZipCode: string,
-    orderDimensions: OrderDimensions,
+    orderDimensions: OrderBoxDimensions,
     orderWeight: number,
   ): Promise<ShipmentCostAndDeadline[]> {
-
     const shipmentCostsAndDeadlinesFromCorreios: ShipmentCostAndDeadline[] = [];
 
     for (const code in CorreiosServiceCodes) {
-
-      const params = new CorreiosParams(
-        CorreiosServiceCodes[code],
-        originZipCode,
-        deliveryZipCode,
-        orderDimensions,
-        String(orderWeight),
+      const tempShipmentCostAndDeadline = await this.getShipmentCostAndDeadlineFromCorreiosByType(
+        originZipCode, deliveryZipCode, orderDimensions, orderWeight, ShippingTypesCorreios[code]
       );
+      shipmentCostsAndDeadlinesFromCorreios.push(tempShipmentCostAndDeadline);
+    }
 
-      try {
-        const response = await axios.post(correiosWebServiceUrl, stringify(params), axiosCorreiosConfig);
-        // console.log('STATUS CODE: ', response.status);
-        const parsedResponseData = parse(response.data);
+    return shipmentCostsAndDeadlinesFromCorreios;
+  }
 
-        shipmentCostsAndDeadlinesFromCorreios.push({
-          type: ShippingTypes['CORREIOS_' + code],
-          cost: parseFloat(get(parsedResponseData, 'cResultado.Servicos.cServico.Valor', 0).replace(/,/g, '.')),
-          deadline: Number(get(parsedResponseData, 'cResultado.Servicos.cServico.PrazoEntrega', 0)),
-        });
 
-      } catch (error) {
+  // TODO - DEPLOY SERVICE PARA REPORTAR A CADA ERRO LANÇADO
+  async getShipmentCostAndDeadlineFromCorreiosByType(
+    originZipCode: string,
+    deliveryZipCode: string,
+    orderDimensions: OrderBoxDimensions,
+    orderWeight: number,
+    ShippingTypeCorreios: ShippingTypesCorreios,
+  ): Promise<ShipmentCostAndDeadline> {
 
-        if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          console.log(error.response.data);
-          console.log(error.response.status);
-          console.log(error.response.headers);
-        } else if (error.request) {
-          // The request was made but no response was received
-          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-          // http.ClientRequest in node.js
-          // console.log(error.request);
-          console.log('WS Correios não responde');
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          console.log('Error', error.message);
-        }
+    const error = {
+      code: 0,
+      message: '',
+    };
 
+    const params = new CorreiosParams(
+      CorreiosServiceCodes[ShippingTypeCorreios],
+      originZipCode,
+      deliveryZipCode,
+      orderDimensions,
+      String(orderWeight),
+    );
+
+    try {
+      const response = await axios.post(correiosWebServiceUrl, stringify(params), axiosCorreiosConfig);
+      const parsedResponseData = parse(response.data);
+
+      error.code = Number(get(parsedResponseData, 'cResultado.Servicos.cServico.Erro', 0));
+      error.message = get(parsedResponseData, 'cResultado.Servicos.cServico.MsgErro', '');
+
+      const shipmentCostAndDeadlineFromCorreiosByType: ShipmentCostAndDeadline = {
+        type: ShippingTypesCorreios[ShippingTypeCorreios],
+        cost: parseFloat(get(parsedResponseData, 'cResultado.Servicos.cServico.Valor', 0).replace(/,/g, '.')),
+        deadline: Number(get(parsedResponseData, 'cResultado.Servicos.cServico.PrazoEntrega', 0)),
+      };
+
+      // 0 = no errors
+      if(error.code !== 0){
+        throw new InternalServerErrorException(`Erro ao calcular o frete. ${error.message}`);
+      }
+
+      return shipmentCostAndDeadlineFromCorreiosByType;
+
+    } catch (error) {
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.log(error.response.message);
+        console.log('Error code: ', error.response.status);
+        console.log(error.response);
+        throw new InternalServerErrorException(`${get(error, 'response.message', 'Erro ao calcular o frete. Por favor, tente novamente mais tarde.')}`);
+
+      } else if (error.request) {
+        // No response
+        console.log('WebService dos Correios não está respondendo');
+        throw new ServiceUnavailableException('Erro ao calcular o frete. Serviço indisponível. Por favor, tente novamente mais tarde');
+
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.log('Erro ao calcular frete Correios: ', get(error, 'message', 'Erro interno'));
+        throw new InternalServerErrorException(`Erro ao calcular o frete. Por favor, tente novamente mais tarde.`);
       }
 
     }
 
-    console.log(shipmentCostsAndDeadlinesFromCorreios);
-    return shipmentCostsAndDeadlinesFromCorreios;
   }
+
 
 }

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProductsService } from '../products/products.service';
@@ -8,9 +12,13 @@ import { UsersService } from '../users/users.service';
 import { ProductOrder, ProductFullOrder } from '../products/dtos/product.dto';
 import { OrderStatus } from './models/order-status.enum';
 import { Order, OrderDocument } from './models/order.schema';
-import { Shipment, ShippingCompanies, ShippingTypes } from './models/shipment.type';
+import {
+  Shipment,
+  ShippingCompanies,
+  ShippingTypes,
+} from './models/shipment.type';
 import { CreateOrderDto } from './dtos/order.dto';
-import { OrderDimensions } from './interfaces/order-dimensions.interface';
+import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
 
 @Injectable()
 export class OrdersService {
@@ -26,7 +34,9 @@ export class OrdersService {
   ): Promise<void> {
     const foundUser = await this.usersService.getUserById(user._id);
     // const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
-    const products = await this.productsService.getProductsAndQuantitiesById(createOrderDto.productsIdsAndQuanties);
+    const products = await this.productsService.getProductsAndQuantitiesById(
+      createOrderDto.productsIdsAndQuanties,
+    );
 
     this.productsService.checkProductsStockAndAvailability(products);
 
@@ -54,27 +64,28 @@ export class OrdersService {
     //   return await newOrder.save();
 
     // } catch(error) {
-      // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
+    // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
     //   console.log(error);
     //   throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
     // }
   }
 
   // MOVE TO SHIPMENTS SERVICE
-  async getOrderShipment( // DEPLOY SHIPMENT MODULE
+  async getOrderShipment(
+    // DEPLOY SHIPMENT MODULE
     products: ProductFullOrder[],
     userAddress: AddressDocument,
     shippingCompany: ShippingCompanies,
-    shippingType: ShippingTypes
+    shippingType: ShippingTypes,
   ): Promise<Shipment> {
     // PEGAR NOSSO ENDEREÇO DO DB - DEPLOY NO SERVICE DO SITE MODULE
     const shipment = new Shipment();
 
     shipment.shiptAddress = userAddress._id; // GET DB - REFER ID ONLY
     shipment.deliveryAddress = userAddress;
-    shipment.cost = 15.90; //
-    shipment.company = shippingCompany, // Por enquanto
-    shipment.type = shippingType; //
+    shipment.cost = 15.9; //
+    (shipment.company = shippingCompany), // Por enquanto
+      (shipment.type = shippingType); //
     shipment.shipped = null;
     shipment.trackingCode = null;
     shipment.statuses = null;
@@ -84,39 +95,47 @@ export class OrdersService {
     return shipment;
   }
 
-  getOrderDimensions(productsAndQuantities: ProductFullOrder[]): OrderDimensions {
+  getOrderDimensions(
+    productsAndQuantities: ProductFullOrder[],
+  ): OrderBoxDimensions {
     // Nesse caso, como é um produto apenas, estou só multiplicando a altura do pacote
     // Pois serão enviados empilhados um sobre o outro quando quantidade for maior que 1
     let length = 0;
     let width = 0;
     let height = 0;
 
-    productsAndQuantities.forEach(product => {
+    productsAndQuantities.forEach((product) => {
       // Pega o maior comprimento
-      length = length < product.product.dimensions.length ? product.product.dimensions.length : length;
+      length =
+        length < product.product.dimensions.productBoxDimensions.length
+          ? product.product.dimensions.productBoxDimensions.length
+          : length;
       // Pega a maior largura
-      width = width < product.product.dimensions.width ? product.product.dimensions.width : width;
+      width =
+        width < product.product.dimensions.productBoxDimensions.width
+          ? product.product.dimensions.productBoxDimensions.width
+          : width;
       // Soma as alturas
-      height = height + (product.quantity * product.product.dimensions.height);
+      height =
+        height +
+        product.quantity *
+          product.product.dimensions.productBoxDimensions.height;
     });
 
-    const orderDimensions = new OrderDimensions(length, width, height);
-    return orderDimensions;
+    const orderBoxDimensions = new OrderBoxDimensions(length, width, height);
+    return orderBoxDimensions;
   }
 
   getOrderWeight(productsAndQuantities: ProductFullOrder[]): number {
     let orderWeight = 0;
-    productsAndQuantities.forEach(product =>
-      orderWeight = orderWeight + (product.quantity * product.product.weight),
+    productsAndQuantities.forEach(
+      (product) =>
+        (orderWeight = orderWeight + product.quantity * product.product.weight),
     );
     return Math.round(orderWeight * 100) / 100;
   }
 
-  getOrderTotalPrice(
-    orderProducts: ProductFullOrder[],
-    shippingTax: number
-  ) {
+  getOrderTotalPrice(orderProducts: ProductFullOrder[], shippingTax: number) {
     //
   }
-
 }

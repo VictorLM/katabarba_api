@@ -39,10 +39,7 @@ export class Shipment {
   })
   company: ShippingCompanies;
 
-  @Prop({
-    required: true,
-    enum: ShippingTypes,
-  })
+  @Prop({ required: true })
   type: ShippingTypes;
 
   @Prop({ required: false, default: null })

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   forwardRef,
   Inject,
@@ -7,7 +8,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './models/user.schema';
 import { ChangeUserPasswordDto, SignUpDto, UserBaseDto } from './dtos/user.dto';
@@ -26,16 +27,26 @@ export class UsersService {
 
   // USERS
 
-  async getUserById(id: string): Promise<UserDocument> {
+  async getUserById(id: Types.ObjectId): Promise<UserDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de usuário "${id}" inválido`);
+    }
+
     const found = await this.usersModel.findById(id);
+
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
     return found;
   }
 
-  async getUserByIdWithPassword(id: string): Promise<UserDocument> {
+  async getUserByIdWithPassword(id: Types.ObjectId): Promise<UserDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de usuário "${id}" inválido`);
+    }
+
     const found = await this.usersModel.findById(id).select('+password').exec();
+
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }

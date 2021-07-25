@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ChangesService } from '../changes/changes.service';
 import { UserDocument } from '../users/models/user.schema';
 import { AddressDto } from './dtos/address.dto';
@@ -25,13 +25,18 @@ export class AddressesService {
     return await this.addressesModel.findOne({ user: user._id });
   }
 
-  private async getAddressById(id: string): Promise<AddressDocument> { // TODO - Está sendo usado?
-    const found = await this.addressesModel.findById(id);
-    if (!found) {
-      throw new NotFoundException(`Endereço com ID "${id}" não encontrado`);
-    }
-    return found;
-  }
+  // private async getAddressById(id: Types.ObjectId): Promise<AddressDocument> { // TODO - Está sendo usado?
+  //   if (!Types.ObjectId.isValid(id)) {
+  //     throw new BadRequestException(`ID de endereço "${id}" inválido`);
+  //   }
+
+  //   const found = await this.addressesModel.findById(id);
+
+  //   if (!found) {
+  //     throw new NotFoundException(`Endereço com ID "${id}" não encontrado`);
+  //   }
+  //   return found;
+  // }
 
   async createAddress(
     addressDto: AddressDto,
@@ -40,14 +45,14 @@ export class AddressesService {
     const foundAddress = await this.getAddressByUser(user);
 
     if(!foundAddress) {
-      const { street, number, complement, city, state, zip } = addressDto;
+      const { street, number, complement, city, state, zipCode } = addressDto;
       const newAddress = new this.addressesModel({
         street,
         number,
         city,
         complement,
         state,
-        zip,
+        zipCode,
         user: user._id,
       });
       return await newAddress.save();
@@ -64,7 +69,7 @@ export class AddressesService {
     const foundAddress = await this.getAddressByUser(user);
 
     if(foundAddress) {
-      const { street, number, complement, city, state, zip } = addressDto;
+      const { street, number, complement, city, state, zipCode } = addressDto;
       // Log changes
       await this.changesService.createChange({
         user: user._id,
@@ -78,7 +83,7 @@ export class AddressesService {
       foundAddress.city = city;
       foundAddress.complement = complement;
       foundAddress.state = state;
-      foundAddress.zip = zip;
+      foundAddress.zipCode = zipCode;
 
       return await foundAddress.save();
 

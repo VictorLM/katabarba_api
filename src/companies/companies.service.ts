@@ -40,20 +40,12 @@ export class CompaniesService {
         isShippingOrigin: { $ne: null },
         inactive: null,
       }
-    ).populate('address', 'zip');
+    ).populate('address', 'zipCode');
 
     if (!found) {
       throw new NotFoundException('Empresa de Remessa não encontrada');
     }
-    return found.address.zip;
+    return found.address.zipCode;
   }
-  // async getAddressByUserAndErrorIfNotExists(user: UserDocument): Promise<AddressDocument> {
-  //   const found = await this.addressesModel.findOne({ user: user._id });
-  //   if (!found) {
-  //     throw new NotFoundException(`Usuário com ID "${user._id}" não tem endereço cadastrado`);
-  //   }
-  //   return found;
-  // }
-
 
 }

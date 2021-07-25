@@ -23,7 +23,7 @@ export class Address {
   state: AddressState;
 
   @Prop({ required: true })
-  zip: string;
+  zipCode: string;
 
   @Prop({
     type: Types.ObjectId,
