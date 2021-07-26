@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
@@ -6,7 +10,9 @@ import { Product, ProductDocument } from './models/product.schema';
 
 @Injectable()
 export class ProductsService {
-  constructor(@InjectModel(Product.name) private productsModel: Model<ProductDocument>) {}
+  constructor(
+    @InjectModel(Product.name) private productsModel: Model<ProductDocument>,
+  ) {}
 
   async getAllProducts(): Promise<ProductDocument[]> {
     return this.productsModel.find();
@@ -33,25 +39,73 @@ export class ProductsService {
     return found;
   }
 
+
   async getProductsAndQuantitiesById(
-    productsIds: ProductOrder[],
+    productsIdsAndQuanties: ProductOrder[],
   ): Promise<ProductFullOrder[]> {
-    const products: ProductFullOrder[] = await Promise.all(
-      productsIds.map(async (product) => ({
+    const normalizedProductsIdsAndQuanties =
+      this.normalizeProductsIdsAndQuantiesArray(productsIdsAndQuanties);
+
+    const productsAndQuanties: ProductFullOrder[] = await Promise.all(
+      normalizedProductsIdsAndQuanties.map(async (product) => ({
         product: await this.getProductById(product.productId),
         quantity: product.quantity,
       })),
     );
 
-    return products;
+    return productsAndQuanties;
   }
 
-  async getProducInStockAndAvailabilitytById(id: Types.ObjectId): Promise<ProductDocument> {
+
+  normalizeProductsIdsAndQuantiesArray(
+    productsIdsAndQuanties: ProductOrder[],
+  ): ProductOrder[] {
+    const normalizedProductsIdsAndQuanties: ProductOrder[] = [];
+
+    productsIdsAndQuanties.forEach((productIdAndQuanty) => {
+      if (
+        normalizedProductsIdsAndQuanties.some(
+          (pIdAndQ) => pIdAndQ.productId === productIdAndQuanty.productId,
+        )
+      ) {
+        const index = normalizedProductsIdsAndQuanties.findIndex(function (
+          normalizedPIdAndQ,
+        ) {
+          return normalizedPIdAndQ.productId === productIdAndQuanty.productId;
+        });
+
+        normalizedProductsIdsAndQuanties[index].quantity =
+          normalizedProductsIdsAndQuanties[index].quantity +
+          productIdAndQuanty.quantity;
+      } else {
+        normalizedProductsIdsAndQuanties.push(productIdAndQuanty);
+      }
+    });
+
+    // TODO FALAR COM JOW
+    // Checa se, depois de normalizado, o array tem algum Produto com Quantidade maior que cinco
+    normalizedProductsIdsAndQuanties.forEach((pAndQ) => {
+      if (pAndQ.quantity > 5) {
+        throw new BadRequestException(
+          `Cada Produto deve ter uma Quantidade máxima de cinco. Produto de ID "${pAndQ.productId}". Quantidade ${pAndQ.quantity}`,
+        );
+      }
+    });
+
+    return normalizedProductsIdsAndQuanties;
+  }
+
+
+  async getProducInStockAndAvailabilitytById(
+    id: Types.ObjectId,
+  ): Promise<ProductDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de produto "${id}" inválido`);
     }
 
-    const found = await this.productsModel.findById(id).select('stock available');
+    const found = await this.productsModel
+      .findById(id)
+      .select('stock available');
 
     if (!found) {
       throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
@@ -59,14 +113,17 @@ export class ProductsService {
     return found;
   }
 
+
   checkProductsStockAndAvailability(products: ProductFullOrder[]) {
-    products.forEach(product => {
-      if(!product.product.available){
-        throw new BadRequestException(`Produto "${product.product.name}" indisponível`);
-      }
-      if(product.product.stock < product.quantity){
+    products.forEach((product) => {
+      if (!product.product.available) {
         throw new BadRequestException(
-          `Sem estoque. Restam apenas "${product.product.stock}" unidades do produto "${product.product.name}" em estoque`
+          `Produto "${product.product.name}" indisponível`,
+        );
+      }
+      if (product.product.stock < product.quantity) {
+        throw new BadRequestException(
+          `Sem estoque. Restam apenas "${product.product.stock}" unidades do produto "${product.product.name}" em estoque`,
         );
       }
     });
