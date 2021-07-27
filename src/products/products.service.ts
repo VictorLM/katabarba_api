@@ -43,11 +43,11 @@ export class ProductsService {
   async getProductsAndQuantitiesById(
     productsIdsAndQuanties: ProductOrder[],
   ): Promise<ProductFullOrder[]> {
-    const normalizedProductsIdsAndQuanties =
-      this.normalizeProductsIdsAndQuantiesArray(productsIdsAndQuanties);
+    // const normalizedProductsIdsAndQuanties =
+    //   this.normalizeProductsIdsAndQuantiesArray(productsIdsAndQuanties);
 
     const productsAndQuanties: ProductFullOrder[] = await Promise.all(
-      normalizedProductsIdsAndQuanties.map(async (product) => ({
+      productsIdsAndQuanties.map(async (product) => ({
         product: await this.getProductById(product.productId),
         quantity: product.quantity,
       })),
@@ -57,43 +57,44 @@ export class ProductsService {
   }
 
 
-  normalizeProductsIdsAndQuantiesArray(
-    productsIdsAndQuanties: ProductOrder[],
-  ): ProductOrder[] {
-    const normalizedProductsIdsAndQuanties: ProductOrder[] = [];
+  // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
+  // normalizeProductsIdsAndQuantiesArray(
+  //   productsIdsAndQuanties: ProductOrder[],
+  // ): ProductOrder[] {
+  //   const normalizedProductsIdsAndQuanties: ProductOrder[] = [];
 
-    productsIdsAndQuanties.forEach((productIdAndQuanty) => {
-      if (
-        normalizedProductsIdsAndQuanties.some(
-          (pIdAndQ) => pIdAndQ.productId === productIdAndQuanty.productId,
-        )
-      ) {
-        const index = normalizedProductsIdsAndQuanties.findIndex(function (
-          normalizedPIdAndQ,
-        ) {
-          return normalizedPIdAndQ.productId === productIdAndQuanty.productId;
-        });
+  //   productsIdsAndQuanties.forEach((productIdAndQuanty) => {
+  //     if (
+  //       normalizedProductsIdsAndQuanties.some(
+  //         (pIdAndQ) => pIdAndQ.productId === productIdAndQuanty.productId,
+  //       )
+  //     ) {
+  //       const index = normalizedProductsIdsAndQuanties.findIndex(function (
+  //         normalizedPIdAndQ,
+  //       ) {
+  //         return normalizedPIdAndQ.productId === productIdAndQuanty.productId;
+  //       });
 
-        normalizedProductsIdsAndQuanties[index].quantity =
-          normalizedProductsIdsAndQuanties[index].quantity +
-          productIdAndQuanty.quantity;
-      } else {
-        normalizedProductsIdsAndQuanties.push(productIdAndQuanty);
-      }
-    });
+  //       normalizedProductsIdsAndQuanties[index].quantity =
+  //         normalizedProductsIdsAndQuanties[index].quantity +
+  //         productIdAndQuanty.quantity;
+  //     } else {
+  //       normalizedProductsIdsAndQuanties.push(productIdAndQuanty);
+  //     }
+  //   });
 
-    // TODO FALAR COM JOW
-    // Checa se, depois de normalizado, o array tem algum Produto com Quantidade maior que cinco
-    normalizedProductsIdsAndQuanties.forEach((pAndQ) => {
-      if (pAndQ.quantity > 5) {
-        throw new BadRequestException(
-          `Cada Produto deve ter uma Quantidade máxima de cinco. Produto de ID "${pAndQ.productId}". Quantidade ${pAndQ.quantity}`,
-        );
-      }
-    });
+  //   // TODO FALAR COM JOW
+  //   // Checa se, depois de normalizado, o array tem algum Produto com Quantidade maior que cinco
+  //   normalizedProductsIdsAndQuanties.forEach((pAndQ) => {
+  //     if (pAndQ.quantity > 5) {
+  //       throw new BadRequestException(
+  //         `Cada Produto deve ter uma Quantidade máxima de cinco. Produto de ID "${pAndQ.productId}". Quantidade ${pAndQ.quantity}`,
+  //       );
+  //     }
+  //   });
 
-    return normalizedProductsIdsAndQuanties;
-  }
+  //   return normalizedProductsIdsAndQuanties;
+  // }
 
 
   async getProducInStockAndAvailabilitytById(

@@ -1,4 +1,4 @@
-import { IsString, Min, IsNotEmpty, Max, IsInt, ValidateNested, IsArray, ArrayMinSize, ArrayMaxSize } from 'class-validator';
+import { IsString, Min, IsNotEmpty, Max, IsInt, ValidateNested, IsArray, ArrayMinSize, ArrayMaxSize, ArrayNotEmpty, ArrayUnique, IsMongoId } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProductDocument } from '../models/product.schema';
 import { Types } from 'mongoose';
@@ -6,8 +6,10 @@ import { Types } from 'mongoose';
 export class ProductsIdsAndQuanties {
   @IsNotEmpty({ message: 'Campo Produtos é obrigatório' })
   @IsArray({ message: 'Formato dos Produtos inválido' })
+  @ArrayNotEmpty({ message: 'Pedido deve conter ao menos um Produto' })
   @ArrayMinSize(1, { message: 'Pedido deve conter ao menos um Produto' })
   @ArrayMaxSize(5, { message: 'Pedido deve conter no máximo cinco Produtos' })
+  @ArrayUnique((product) => product.productId, { message: 'Produtos devem ser unicos' })
   @ValidateNested({ each: true })
   @Type(() => ProductOrder)
   readonly productsIdsAndQuanties: ProductOrder[];
@@ -23,7 +25,7 @@ class ProductQuantity{
 
 export class ProductOrder extends ProductQuantity {
   @IsNotEmpty({ message: 'Campo ID dos Produtos é obrigatório' })
-  @IsString({ message: 'ID do produto inválido' })
+  @IsMongoId({ message: 'ID do produto inválido' })
   readonly productId: Types.ObjectId;
 }
 

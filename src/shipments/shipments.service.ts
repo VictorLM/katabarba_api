@@ -24,7 +24,7 @@ import {
   ShipmentCostAndDeadline,
   ShipmentsCostsAndDeadlines,
 } from './interfaces/shipping-costs.interface';
-import { ShippingTypesCorreios } from './enums/shipping-types.enum';
+import { ShippingTypes } from './enums/shipping-types.enum';
 import { OrderBoxDimensions } from '../orders/interfaces/order-dimensions.interface';
 import { ShippingCompanies } from './enums/shipping-companies.enum';
 
@@ -115,7 +115,7 @@ export class ShipmentsService {
           deliveryZipCode,
           orderDimensions,
           orderWeight,
-          ShippingTypesCorreios[code],
+          ShippingTypes[code],
         );
       shipmentCostsAndDeadlinesFromCorreios.push(tempShipmentCostAndDeadline);
     }
@@ -129,7 +129,7 @@ export class ShipmentsService {
     deliveryZipCode: string,
     orderDimensions: OrderBoxDimensions,
     orderWeight: number,
-    ShippingTypeCorreios: ShippingTypesCorreios,
+    ShippingTypes: ShippingTypes,
   ): Promise<ShipmentCostAndDeadline> {
     const error = {
       code: 0,
@@ -137,7 +137,7 @@ export class ShipmentsService {
     };
 
     const params = new CorreiosParams(
-      CorreiosServiceCodes[ShippingTypeCorreios],
+      CorreiosServiceCodes[ShippingTypes],
       originZipCode,
       deliveryZipCode,
       orderDimensions,
@@ -163,7 +163,7 @@ export class ShipmentsService {
 
       const shipmentCostAndDeadlineFromCorreiosByType: ShipmentCostAndDeadline =
         {
-          type: ShippingTypesCorreios[ShippingTypeCorreios],
+          type: ShippingTypes[ShippingTypes],
           cost: parseFloat(
             get(
               parsedResponseData,

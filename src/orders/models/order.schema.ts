@@ -1,9 +1,10 @@
 import { Prop,  Schema, SchemaFactory,  } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Payment } from '../../payments/models/payment.schema';
+import { ProductDocument } from '../../products/models/product.schema';
+import { Shipment } from '../../shipments/models/shipment.schema';
 import { User } from '../../users/models/user.schema';
-import { OrderStatus } from './order-status.enum';
-import { Payment } from './payment.type';
-import { Shipment } from './shipment.type';
+import { OrderStatuses } from './order-statuses.enum';
 
 export type OrderDocument = Order & Document;
 
@@ -17,34 +18,36 @@ export class Order {
   user: User;
 
   @Prop({ required: true })
-  products: [{
-    product: Types.DocumentArray<any>,
+  productsAndQuantities: [{
+    product: Types.DocumentArray<ProductDocument>,
     quantity: number;
   }];
   // Para manter o hitórico de preço dos produtos
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Shipment',
+    required: true,
+  })
+  shippment: Shipment;
 
   @Prop({ required: true })
   totalPrice: number;
   // Para não precisar ficar calculando
 
   @Prop({
-    type: Shipment,
-    required: true
-  })
-  shipment: Shipment;
-
-  @Prop({
-    type: Payment,
+    type: Types.ObjectId,
+    ref: 'Payment',
     required: false,
-    default: null
+    default: null,
   })
   payment: Payment;
 
   @Prop({ required: false,
-    enum: OrderStatus,
-    default: OrderStatus.AWAITING_PAYMENT
+    enum: OrderStatuses,
+    default: OrderStatuses.AWAITING_PAYMENT
   })
-  status: OrderStatus;
+  status: OrderStatuses;
 
   @Prop({ required: false })
   notes: string;

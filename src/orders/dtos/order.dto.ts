@@ -1,6 +1,7 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { ShippingCompanies, ShippingTypes } from '../models/shipment.type';
 import { ProductsIdsAndQuanties } from '../../products/dtos/product.dto';
+import { ShippingCompanies } from '../../shipments/enums/shipping-companies.enum';
+import { ShippingTypes } from '../../shipments/enums/shipping-types.enum';
 
 export class CreateOrderDto extends ProductsIdsAndQuanties {
   @IsNotEmpty({ message: 'Campo Transportadora é obrigatório' })

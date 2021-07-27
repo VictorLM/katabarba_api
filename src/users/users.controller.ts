@@ -14,7 +14,7 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  // Create está no AuthController
+  // Create está no AuthController, porém usando o UsersService
 
   @Get('/')
   getUser(@GetUser() user: UserDocument): Promise<UserDocument> {

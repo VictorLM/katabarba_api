@@ -1,4 +1,4 @@
-export enum OrderStatus {
+export enum OrderStatuses {
   AWAITING_PAYMENT = 'AWAITING_PAYMENT',
   PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
   PROCESSING = 'PROCESSING',

@@ -10,15 +10,16 @@ import { AddressDocument } from '../addresses/models/address.schema';
 import { UserDocument } from '../users/models/user.schema';
 import { UsersService } from '../users/users.service';
 import { ProductOrder, ProductFullOrder } from '../products/dtos/product.dto';
-import { OrderStatus } from './models/order-status.enum';
+import { OrderStatuses } from './models/order-statuses.enum';
 import { Order, OrderDocument } from './models/order.schema';
-import {
-  Shipment,
-  ShippingCompanies,
-  ShippingTypes,
-} from './models/shipment.type';
+// import {
+//   Shipment,
+//   ShippingCompanies,
+//   ShippingTypes,
+// } from './models/shipment.type';
 import { CreateOrderDto } from './dtos/order.dto';
 import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
+import { AddressesService } from '../addresses/addresses.service';
 
 @Injectable()
 export class OrdersService {
@@ -26,14 +27,14 @@ export class OrdersService {
     @InjectModel(Order.name) private ordersModel: Model<OrderDocument>,
     private productsService: ProductsService,
     private usersService: UsersService,
+    private addressesService: AddressesService,
   ) {}
 
   async createOrder(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
   ): Promise<void> {
-    const foundUser = await this.usersService.getUserById(user._id);
-    // const foundUserAddress = await this.usersService.getAddressByUserAndErrorIfNotExists(foundUser);
+    const foundUserAddress = await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
     const products = await this.productsService.getProductsAndQuantitiesById(
       createOrderDto.productsIdsAndQuanties,
     );
@@ -44,7 +45,6 @@ export class OrdersService {
     // CHECAR ESTOQUE, DISPONIBILIDADE, VALOR, VALOR FRETE
     // UPDATE PRODUCTS STOCK
     // SCHEDULE JOB - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
-    // Check array unique productIds
     const { shippingCompany, shippingType } = createOrderDto;
     // const shipment = await this.getOrderShipment(products, foundUserAddress, shippingCompany, shippingType);
     ///////////////// FAZER PAYMENT MODEL SEPARADO
@@ -56,7 +56,7 @@ export class OrdersService {
     //   shipAddress: foundUserAddress,
     //   shippingTax,
     //   shippingCompany: ShippingCompanies.CORREIOS, // Por enquanto
-    //   status: OrderStatus.AWAITING_PAYMENT,
+    //   status: OrderStatuses.AWAITING_PAYMENT,
     //   totalPrice,
     // });
 
@@ -71,29 +71,29 @@ export class OrdersService {
   }
 
   // MOVE TO SHIPMENTS SERVICE
-  async getOrderShipment(
-    // DEPLOY SHIPMENT MODULE
-    products: ProductFullOrder[],
-    userAddress: AddressDocument,
-    shippingCompany: ShippingCompanies,
-    shippingType: ShippingTypes,
-  ): Promise<Shipment> {
-    // PEGAR NOSSO ENDEREÇO DO DB - DEPLOY NO SERVICE DO SITE MODULE
-    const shipment = new Shipment();
+  // async getOrderShipment(
+  //   // DEPLOY SHIPMENT MODULE
+  //   products: ProductFullOrder[],
+  //   userAddress: AddressDocument,
+  //   shippingCompany: ShippingCompanies,
+  //   shippingType: ShippingTypes,
+  // ): Promise<Shipment> {
+  //   // PEGAR NOSSO ENDEREÇO DO DB - DEPLOY NO SERVICE DO SITE MODULE
+  //   const shipment = new Shipment();
 
-    shipment.shiptAddress = userAddress._id; // GET DB - REFER ID ONLY
-    shipment.deliveryAddress = userAddress;
-    shipment.cost = 15.9; //
-    (shipment.company = shippingCompany), // Por enquanto
-      (shipment.type = shippingType); //
-    shipment.shipped = null;
-    shipment.trackingCode = null;
-    shipment.statuses = null;
+  //   shipment.shiptAddress = userAddress._id; // GET DB - REFER ID ONLY
+  //   shipment.deliveryAddress = userAddress;
+  //   shipment.cost = 15.9; //
+  //   (shipment.company = shippingCompany), // Por enquanto
+  //     (shipment.type = shippingType); //
+  //   shipment.shipped = null;
+  //   shipment.trackingCode = null;
+  //   shipment.statuses = null;
 
-    console.log(shipment);
+  //   console.log(shipment);
 
-    return shipment;
-  }
+  //   return shipment;
+  // }
 
   getOrderDimensions(
     productsAndQuantities: ProductFullOrder[],
