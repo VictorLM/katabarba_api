@@ -1,17 +1,17 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './models/order.schema';
-import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { ProductsModule } from '../products/products.module';
 import { AddressesModule } from '../addresses/addresses.module';
+import { ShipmentsModule } from '../shipments/shipments.module';
 
 @Module({
   imports: [
+    forwardRef(() => ShipmentsModule),
     AuthModule,
-    UsersModule,
     AddressesModule,
     ProductsModule,
     MongooseModule.forFeature([

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { OrderDocument } from '../orders/models/order.schema';
 import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
 import { Product, ProductDocument } from './models/product.schema';
 
@@ -39,7 +40,6 @@ export class ProductsService {
     return found;
   }
 
-
   async getProductsAndQuantitiesById(
     productsIdsAndQuanties: ProductOrder[],
   ): Promise<ProductFullOrder[]> {
@@ -56,8 +56,44 @@ export class ProductsService {
     return productsAndQuanties;
   }
 
+  async getProducInStockAndAvailabilitytById(
+    id: Types.ObjectId,
+  ): Promise<ProductDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de produto "${id}" inválido`);
+    }
 
-  // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
+    const found = await this.productsModel
+      .findById(id)
+      .select('stock available');
+
+    if (!found) {
+      throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
+    }
+    return found;
+  }
+
+  checkProductsStockAndAvailability(products: ProductFullOrder[]) {
+    products.forEach((product) => {
+      if (!product.product.available) {
+        throw new BadRequestException(
+          `Produto "${product.product.name}" indisponível`,
+        );
+      }
+      if (product.product.stock < product.quantity) {
+        throw new BadRequestException(
+          `Sem estoque. Restam apenas "${product.product.stock}" unidades do produto "${product.product.name}" em estoque`,
+        );
+      }
+    });
+  }
+
+  async updateProductsStockByOrder(order: OrderDocument): Promise<void> {
+    // TODO
+    return
+  }
+
+    // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
   // normalizeProductsIdsAndQuantiesArray(
   //   productsIdsAndQuanties: ProductOrder[],
   // ): ProductOrder[] {
@@ -95,39 +131,5 @@ export class ProductsService {
 
   //   return normalizedProductsIdsAndQuanties;
   // }
-
-
-  async getProducInStockAndAvailabilitytById(
-    id: Types.ObjectId,
-  ): Promise<ProductDocument> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException(`ID de produto "${id}" inválido`);
-    }
-
-    const found = await this.productsModel
-      .findById(id)
-      .select('stock available');
-
-    if (!found) {
-      throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
-    }
-    return found;
-  }
-
-
-  checkProductsStockAndAvailability(products: ProductFullOrder[]) {
-    products.forEach((product) => {
-      if (!product.product.available) {
-        throw new BadRequestException(
-          `Produto "${product.product.name}" indisponível`,
-        );
-      }
-      if (product.product.stock < product.quantity) {
-        throw new BadRequestException(
-          `Sem estoque. Restam apenas "${product.product.stock}" unidades do produto "${product.product.name}" em estoque`,
-        );
-      }
-    });
-  }
 
 }

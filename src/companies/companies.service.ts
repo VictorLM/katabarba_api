@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { AddressDocument } from '../addresses/models/address.schema';
 import { Company, CompanyDocument } from './models/company.schema';
 
 @Injectable()
@@ -46,6 +47,20 @@ export class CompaniesService {
       throw new NotFoundException('Empresa de Remessa não encontrada');
     }
     return found.address.zipCode;
+  }
+
+  async getShiptCompanyAddress(): Promise<any> { // TODO ANY TYPE
+    const found = await this.companiesModel.findOne(
+      {
+        isShippingOrigin: { $ne: null },
+        inactive: null,
+      }
+    ).populate('address');
+
+    if (!found) {
+      throw new NotFoundException('Empresa de Remessa não encontrada');
+    }
+    return found.address;
   }
 
 }

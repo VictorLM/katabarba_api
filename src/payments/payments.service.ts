@@ -9,4 +9,6 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentsModel: Model<PaymentDocument>,
   ) {}
 
+  // webhook (IPN)
+
 }

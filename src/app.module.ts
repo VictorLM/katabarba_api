@@ -13,6 +13,7 @@ import { ShipmentsModule } from './shipments/shipments.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { CompaniesModule } from './companies/companies.module';
 import { PaymentsModule } from './payments/payments.module';
+import { MercadoPagoModule } from './mercado-pago/mercado-pago.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PaymentsModule } from './payments/payments.module';
     AddressesModule,
     CompaniesModule,
     PaymentsModule,
+    MercadoPagoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

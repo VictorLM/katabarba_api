@@ -1,4 +1,6 @@
 import {
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException,
@@ -6,7 +8,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CompaniesService } from '../companies/companies.service';
-import { PublicGetShipmentCostsDTO } from './dtos/shipment.dto';
+import { CreateShipmentDTO, PublicGetShipmentCostsDTO } from './dtos/shipment.dto';
 import { Shipment, ShipmentDocument } from './models/shipment.schema';
 import axios from 'axios';
 import { get } from 'lodash';
@@ -34,8 +36,49 @@ export class ShipmentsService {
     @InjectModel(Shipment.name) private shipmentsModel: Model<ShipmentDocument>,
     private companiesService: CompaniesService,
     private productsService: ProductsService,
+    @Inject(forwardRef(() => OrdersService))
     private ordersService: OrdersService,
   ) {}
+
+  async createShipment(createShipmentDTO: CreateShipmentDTO): Promise<ShipmentDocument> {
+    const { deliveryAddress, shippingCompany, shippingType, productsAndQuantities } = createShipmentDTO;
+    const shiptCompanyAddress = await this.companiesService.getShiptCompanyAddress();
+    // return shiptCompanyAddress;
+    const orderDimensions = this.ordersService.getOrderDimensions(
+      productsAndQuantities,
+    );
+    const orderWeight = this.ordersService.getOrderWeight(
+      productsAndQuantities,
+    );
+    // if(shippingCompany === ShippingCompanies.CORREIOS) {
+    //} else if(shippingCompany === ShippingCompanies.OTHERCOMPANY) {}
+    // Sem else porque o order-dto já retorna erro senão enum
+    const shipmentCostAndDeadline = await this.getShipmentCostAndDeadlineFromCorreiosByType(
+      shiptCompanyAddress.zipCode,
+      deliveryAddress.zipCode,
+      orderDimensions,
+      orderWeight,
+      shippingType,
+    );
+
+    const newShipment = new this.shipmentsModel({
+      shiptAddress: shiptCompanyAddress._id,
+      deliveryAddress,
+      company: shippingCompany,
+      type: shipmentCostAndDeadline.type,
+      cost: shipmentCostAndDeadline.cost,
+      deadline: shipmentCostAndDeadline.deadline,
+    });
+
+    try {
+      return await newShipment.save();
+
+    } catch(error) {
+      console.log(error);
+      throw new InternalServerErrorException('Erro ao criar Remessa. Por favor, tente novamente mais tarde');
+    }
+
+  }
 
   // TODO - DEFINIR FRETE MÍNIMO
   // TODO - IF PRODUCT FREE SHIPMENT
@@ -129,7 +172,7 @@ export class ShipmentsService {
     deliveryZipCode: string,
     orderDimensions: OrderBoxDimensions,
     orderWeight: number,
-    ShippingTypes: ShippingTypes,
+    shippingType: ShippingTypes,
   ): Promise<ShipmentCostAndDeadline> {
     const error = {
       code: 0,
@@ -137,7 +180,7 @@ export class ShipmentsService {
     };
 
     const params = new CorreiosParams(
-      CorreiosServiceCodes[ShippingTypes],
+      CorreiosServiceCodes[shippingType],
       originZipCode,
       deliveryZipCode,
       orderDimensions,
@@ -163,7 +206,7 @@ export class ShipmentsService {
 
       const shipmentCostAndDeadlineFromCorreiosByType: ShipmentCostAndDeadline =
         {
-          type: ShippingTypes[ShippingTypes],
+          type: shippingType,
           cost: parseFloat(
             get(
               parsedResponseData,

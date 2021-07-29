@@ -11,14 +11,6 @@ export class CreateOrderDto extends ProductsIdsAndQuanties {
   @IsNotEmpty({ message: 'Campo Tipo de Frete é obrigatório' })
   @IsEnum(ShippingTypes, { message: 'Tipo de Frete inválido' })
   readonly shippingType: ShippingTypes;
-
-  // Campos abaixo não serão preenchidos pelo usuário
-  // Por isso não necessitam de validação
-  // readonly shipAddress: Document;
-  // readonly shippingTax: number;
-  // readonly shippingCompany: ShippingCompanies;
-  // readonly status: OrderStatus;
-  // readonly totalPrice: number;
 }
 
 // Acho que não será necessário DTO para atualizar

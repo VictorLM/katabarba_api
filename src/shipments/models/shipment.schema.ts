@@ -1,6 +1,5 @@
 import { Prop,  Schema, SchemaFactory,  } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Order } from '../../orders/models/order.schema';
 import { Address, AddressDocument } from '../../addresses/models/address.schema';
 import { ShippingCompanies } from '../enums/shipping-companies.enum';
 import { ShippingTypes } from '../enums/shipping-types.enum';
@@ -10,13 +9,6 @@ export type ShipmentDocument = Shipment & Document;
 
 @Schema({ collection: 'shipments', timestamps: true })
 export class Shipment {
-  @Prop({
-    type: Types.ObjectId,
-    ref: 'Order',
-    required: true,
-  })
-  order: Order;
-
   @Prop({
     type: Types.ObjectId,
     ref: 'Address',

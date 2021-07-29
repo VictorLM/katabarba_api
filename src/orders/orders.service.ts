@@ -1,99 +1,75 @@
 import {
-  BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProductsService } from '../products/products.service';
-import { AddressDocument } from '../addresses/models/address.schema';
 import { UserDocument } from '../users/models/user.schema';
-import { UsersService } from '../users/users.service';
-import { ProductOrder, ProductFullOrder } from '../products/dtos/product.dto';
 import { OrderStatuses } from './models/order-statuses.enum';
 import { Order, OrderDocument } from './models/order.schema';
-// import {
-//   Shipment,
-//   ShippingCompanies,
-//   ShippingTypes,
-// } from './models/shipment.type';
 import { CreateOrderDto } from './dtos/order.dto';
 import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
 import { AddressesService } from '../addresses/addresses.service';
+import { ShipmentsService } from '../shipments/shipments.service';
+import { ProductFullOrder } from '../products/dtos/product.dto';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectModel(Order.name) private ordersModel: Model<OrderDocument>,
     private productsService: ProductsService,
-    private usersService: UsersService,
     private addressesService: AddressesService,
+    @Inject(forwardRef(() => ShipmentsService))
+    private shipmentsService: ShipmentsService,
   ) {}
 
   async createOrder(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
-  ): Promise<void> {
+  ): Promise<any> {
     const foundUserAddress = await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
-    const products = await this.productsService.getProductsAndQuantitiesById(
+    const productsAndQuantities = await this.productsService.getProductsAndQuantitiesById(
       createOrderDto.productsIdsAndQuanties,
     );
-
-    this.productsService.checkProductsStockAndAvailability(products);
-
-    // CORREIOS ENTREGA QUALQUER ENDEREÇO? IF ERROR
-    // CHECAR ESTOQUE, DISPONIBILIDADE, VALOR, VALOR FRETE
-    // UPDATE PRODUCTS STOCK
-    // SCHEDULE JOB - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
+    this.productsService.checkProductsStockAndAvailability(productsAndQuantities);
     const { shippingCompany, shippingType } = createOrderDto;
-    // const shipment = await this.getOrderShipment(products, foundUserAddress, shippingCompany, shippingType);
-    ///////////////// FAZER PAYMENT MODEL SEPARADO
-    // const totalPrice = this.getOrderTotalPrice(products, shipment);
 
-    // const newOrder = new this.ordersModel({
-    //   user: foundUser._id,
-    //   products,
-    //   shipAddress: foundUserAddress,
-    //   shippingTax,
-    //   shippingCompany: ShippingCompanies.CORREIOS, // Por enquanto
-    //   status: OrderStatuses.AWAITING_PAYMENT,
-    //   totalPrice,
-    // });
+    const newShipment = await this.shipmentsService.createShipment({
+      deliveryAddress: foundUserAddress,
+      shippingCompany,
+      shippingType,
+      productsAndQuantities,
+    });
 
-    // try{
-    //   return await newOrder.save();
+    const orderTotalPrice = this.getOrderTotalPrice(productsAndQuantities, newShipment.cost);
 
-    // } catch(error) {
-    // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
-    //   console.log(error);
-    //   throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
-    // }
+    const newOrder = new this.ordersModel({
+      user: user._id,
+      productsAndQuantities,
+      shippment: newShipment._id,
+      totalPrice: orderTotalPrice,
+      status: OrderStatuses.AWAITING_PAYMENT,
+    });
+
+    // TODO - NEW MP PREFERENCE WITH ORDER ID
+
+    try {
+      await newOrder.save();
+
+    } catch(error) {
+      // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
+      console.log(error);
+      // TODO - ABORTS?
+      throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
+    }
+
+    this.productsService.updateProductsStockByOrder(newOrder);
+    return newOrder;
+
   }
-
-  // MOVE TO SHIPMENTS SERVICE
-  // async getOrderShipment(
-  //   // DEPLOY SHIPMENT MODULE
-  //   products: ProductFullOrder[],
-  //   userAddress: AddressDocument,
-  //   shippingCompany: ShippingCompanies,
-  //   shippingType: ShippingTypes,
-  // ): Promise<Shipment> {
-  //   // PEGAR NOSSO ENDEREÇO DO DB - DEPLOY NO SERVICE DO SITE MODULE
-  //   const shipment = new Shipment();
-
-  //   shipment.shiptAddress = userAddress._id; // GET DB - REFER ID ONLY
-  //   shipment.deliveryAddress = userAddress;
-  //   shipment.cost = 15.9; //
-  //   (shipment.company = shippingCompany), // Por enquanto
-  //     (shipment.type = shippingType); //
-  //   shipment.shipped = null;
-  //   shipment.trackingCode = null;
-  //   shipment.statuses = null;
-
-  //   console.log(shipment);
-
-  //   return shipment;
-  // }
 
   getOrderDimensions(
     productsAndQuantities: ProductFullOrder[],
@@ -135,7 +111,13 @@ export class OrdersService {
     return Math.round(orderWeight * 100) / 100;
   }
 
-  getOrderTotalPrice(orderProducts: ProductFullOrder[], shippingTax: number) {
-    //
+  getOrderTotalPrice(orderProducts: ProductFullOrder[], shippingTax: number): number  {
+    let orderTotalPrice = 0;
+    orderProducts.forEach(
+      (product) =>
+        (orderTotalPrice = orderTotalPrice + product.quantity * product.product.price),
+    );
+    return orderTotalPrice + shippingTax;
   }
+
 }

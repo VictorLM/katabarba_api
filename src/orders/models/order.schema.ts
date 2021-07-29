@@ -17,6 +17,9 @@ export class Order {
   })
   user: User;
 
+  @Prop({ required: false, default: null })
+  mpPreferenceId: string; // Mercado Pago Preference ID
+
   @Prop({ required: true })
   productsAndQuantities: [{
     product: Types.DocumentArray<ProductDocument>,

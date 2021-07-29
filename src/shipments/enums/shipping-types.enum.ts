@@ -1,6 +1,6 @@
 export enum ShippingTypes {
   // CORREIOS
-  CARTA_REGISTRADA = 'CARTA_REGISTRADA',
+  // CARTA_REGISTRADA = 'CARTA_REGISTRADA', // TODO
   PAC = 'PAC',
   SEDEX = 'SEDEX',
 }
