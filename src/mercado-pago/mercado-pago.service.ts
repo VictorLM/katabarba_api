@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as MercadoPago from 'mercadopago';
 import { ConfigService } from '@nestjs/config';
 import { OrderDocument } from '../orders/models/order.schema';
+import { CreatePreferencePayload, PreferenceItem } from 'mercadopago/models/preferences/create-payload.model';
 
 @Injectable()
 export class MercadoPagoService {
@@ -12,53 +13,64 @@ export class MercadoPagoService {
     });
   }
 
+  // TODO - ERROR HANDLING
   // TODO - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
-  async createMercadoPagoPreference(order: OrderDocument ): Promise<string> {
-    return 'testeDeId123';
-    // const items: PreferenceItem[] =
-    //   [
-    //     {
-    //       id: 'idddd', // todo
-    //       title: "Dummy Item",
-    //       description: "Dummy description",
-    //       picture_url: "http://www.myapp.com/myimage.jpg",
-    //       category_id: "cat123",
-    //       quantity: 1,
-    //       currency_id: "BRL",
-    //       unit_price: 100,
-    //     },
-    //   ];
+  async createPreferenceWithOrderId(order: OrderDocument): Promise<{ mpPreferenceId: string }> {
 
-    // const preference: CreatePreferencePayload = {
-    //   external_reference: 'test123', // ORDER ID?
-    //   // expires: true,
-    //   // expiration_date_to: 1 mes futuro
-    //   // notification_url: '', meter ID + URL?
-    //   items,
-    //   // payer: {
-    //   //   phone: {},
-    //   //   identification: {},
-    //   //   address: {}
-    //   // },
-    //   // payment_methods: {
-    //   //   default_payment_method_id: '',
-    //   //   excluded_payment_methods: [
-    //   //     { id: 'account_money'}
-    //   //   ],
-    //   // },
-    // };
+    const items: PreferenceItem[] = [];
 
-    // //return mpPreferenceId;
+    order.productsAndQuantities.forEach(productAndQuantity => {
 
-    // try {
-    //   const response = await MercadoPago.preferences.create(preference);
-    //   console.log(response.body);
-    //   // preference_id = response.body.id;
-    //   return response.body;
+      items.push({
+        id: String(productAndQuantity.product._id),
+        title: productAndQuantity.product.name,
+        description: productAndQuantity.product.description,
+        picture_url: productAndQuantity.product.images[0],
+        category_id: productAndQuantity.product.category,
+        quantity: productAndQuantity.quantity,
+        currency_id: "BRL",
+        unit_price: productAndQuantity.product.price,
+      });
 
-    // } catch(error) {
-    //   console.log(error);
-    // }
+    });
+
+    const expireDate = this.getPreferenceExpireDate();
+
+    // TODO - Se der problemas de rejeição das compras com cartão, add infos user no objeto payer
+    const preference: CreatePreferencePayload = {
+      items,
+      external_reference: String(order._id),
+      expires: true,
+      expiration_date_to: expireDate,
+      // notification_url: '', TODO - CONFIG NO PAINEL DO MP
+      // payer: {
+      //   phone: {},
+      //   identification: {},
+      //   address: {}
+      // },
+    };
+
+    try {
+      const response = await MercadoPago.preferences.create(preference);
+
+      console.log(response.body);
+
+      return { mpPreferenceId: response.body.id }; // Preference ID
+
+    } catch(error) {
+      console.log(error);
+    }
+
+  }
+
+  // TODO - FALAR C/ JOW
+  getPreferenceExpireDate(): string {
+    // Data atual + uma semana
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    // FUSO BRAZIL - UTC-3
+    const formatedDate = String(date.toISOString().replace('Z','-03:00'));
+    return formatedDate;
   }
 
 }

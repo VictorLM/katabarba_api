@@ -15,6 +15,7 @@ import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
 import { AddressesService } from '../addresses/addresses.service';
 import { ShipmentsService } from '../shipments/shipments.service';
 import { ProductFullOrder } from '../products/dtos/product.dto';
+import { MercadoPagoService } from '../mercado-pago/mercado-pago.service';
 
 @Injectable()
 export class OrdersService {
@@ -24,12 +25,13 @@ export class OrdersService {
     private addressesService: AddressesService,
     @Inject(forwardRef(() => ShipmentsService))
     private shipmentsService: ShipmentsService,
+    private mercadoPagoService: MercadoPagoService,
   ) {}
 
   async createOrder(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
-  ): Promise<any> {
+  ): Promise<{ mpPreferenceId: string }> {
     const foundUserAddress = await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
     const productsAndQuantities = await this.productsService.getProductsAndQuantitiesById(
       createOrderDto.productsIdsAndQuanties,
@@ -54,10 +56,13 @@ export class OrdersService {
       status: OrderStatuses.AWAITING_PAYMENT,
     });
 
-    // TODO - NEW MP PREFERENCE WITH ORDER ID
-
     try {
       await newOrder.save();
+
+      // NEW MP PREFERENCE WITH ORDER ID
+      const mpPreferenceId = this.mercadoPagoService.createPreferenceWithOrderId(newOrder);
+
+      return mpPreferenceId;
 
     } catch(error) {
       // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
@@ -66,8 +71,6 @@ export class OrdersService {
       throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
     }
 
-    this.productsService.updateProductsStockByOrder(newOrder);
-    return newOrder;
 
   }
 

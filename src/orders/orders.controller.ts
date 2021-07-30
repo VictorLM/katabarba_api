@@ -19,7 +19,7 @@ export class OrdersController {
   createOrder(
     @Body() createOrderDto: CreateOrderDto,
     @GetUser() user: UserDocument
-  ): Promise<void> {
+  ): Promise<{ mpPreferenceId: string }> {
     return this.ordersService.createOrder(createOrderDto, user);
   }
 

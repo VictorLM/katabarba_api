@@ -22,7 +22,7 @@ export class Order {
 
   @Prop({ required: true })
   productsAndQuantities: [{
-    product: Types.DocumentArray<ProductDocument>,
+    product: ProductDocument,
     quantity: number;
   }];
   // Para manter o hitórico de preço dos produtos

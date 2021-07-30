@@ -7,9 +7,11 @@ import { AuthModule } from '../auth/auth.module';
 import { ProductsModule } from '../products/products.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
+import { MercadoPagoModule } from '../mercado-pago/mercado-pago.module';
 
 @Module({
   imports: [
+    MercadoPagoModule,
     forwardRef(() => ShipmentsModule),
     AuthModule,
     AddressesModule,

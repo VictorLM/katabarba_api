@@ -4,6 +4,7 @@ import { MercadoPagoService } from './mercado-pago.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [MercadoPagoService]
+  providers: [MercadoPagoService],
+  exports: [MercadoPagoService],
 })
 export class MercadoPagoModule {}

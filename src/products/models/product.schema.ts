@@ -13,6 +13,9 @@ export class Product {
   description: string;
 
   @Prop({ required: true })
+  category: string;
+
+  @Prop({ required: true })
   images: string[];
 
   @Prop({ required: true })
