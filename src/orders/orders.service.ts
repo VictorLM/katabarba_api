@@ -28,7 +28,7 @@ export class OrdersService {
     private mercadoPagoService: MercadoPagoService,
   ) {}
 
-  async createOrder(
+  async createOrderAndGetMpPreferenceId(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
   ): Promise<{ mpPreferenceId: string }> {
@@ -49,9 +49,9 @@ export class OrdersService {
     const orderTotalPrice = this.getOrderTotalPrice(productsAndQuantities, newShipment.cost);
 
     const newOrder = new this.ordersModel({
-      user: user._id,
+      user,
       productsAndQuantities,
-      shippment: newShipment._id,
+      shippment: newShipment,
       totalPrice: orderTotalPrice,
       status: OrderStatuses.AWAITING_PAYMENT,
     });
@@ -60,7 +60,11 @@ export class OrdersService {
       await newOrder.save();
 
       // NEW MP PREFERENCE WITH ORDER ID
-      const mpPreferenceId = this.mercadoPagoService.createPreferenceWithOrderId(newOrder);
+      const mpPreferenceId = await this.mercadoPagoService.createPreferenceWithOrderId(newOrder);
+
+      newOrder.mpPreferenceId = mpPreferenceId.mpPreferenceId;
+
+      await newOrder.save();
 
       return mpPreferenceId;
 

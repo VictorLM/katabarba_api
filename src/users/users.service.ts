@@ -60,13 +60,14 @@ export class UsersService {
 
   // Método usado no AuthController
   async createUser(signUpDto: SignUpDto): Promise<void> {
-    const { email, name, password, cpf, phone } = signUpDto;
+    const { email, name, surname, password, cpf, phone } = signUpDto;
     const hashedPassword = await this.authService.hashPassword(password);
 
     const newUser = new this.usersModel({
       email,
       password: hashedPassword,
       name,
+      surname,
       cpf, // TODO - CPF único?
       phone,
       roles: [Role.CUSTOMER], // Os admin eu seto o role direto no DB
@@ -90,7 +91,7 @@ export class UsersService {
     userBaseDto: UserBaseDto,
     user: UserDocument,
   ): Promise<UserDocument> {
-    const { cpf, email, name, phone } = userBaseDto;
+    const { cpf, email, name, surname, phone } = userBaseDto;
     // TODO - Atualizar req.user logo depois de atualizar o user
     try {
       const updatedUser = await this.usersModel.findOneAndUpdate(
@@ -98,6 +99,7 @@ export class UsersService {
         {
           email,
           name,
+          surname,
           cpf,
           phone,
         },

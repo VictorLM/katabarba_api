@@ -48,9 +48,6 @@ export class Payment {
   @Prop({ required: true })
   transactionAmount: number;
 
-  // @Prop({ required: true }) // TODO - ENUM
-  // method: string;
-
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

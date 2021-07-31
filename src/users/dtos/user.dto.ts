@@ -14,9 +14,14 @@ export class UserBaseDto {
   readonly email: string;
 
   @IsString({ message: 'Nome inválido. Somente letras.' })
-  @MinLength(6, { message: 'Nome deve ter no mínimo $constraint1 caracteres' })
+  @MinLength(3, { message: 'Nome deve ter no mínimo $constraint1 caracteres' })
   @MaxLength(100, { message: 'Nome deve ter no máximo $constraint1 caracteres' })
   readonly name: string;
+
+  @IsString({ message: 'Nome inválido. Somente letras.' })
+  @MinLength(3, { message: 'Nome deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(100, { message: 'Nome deve ter no máximo $constraint1 caracteres' })
+  readonly surname: string;
 
   @IsInt({ message: 'CPF inválido. Somente números' })
   readonly cpf: number; // TODO - ALGORITMO PARA VALIDAR
