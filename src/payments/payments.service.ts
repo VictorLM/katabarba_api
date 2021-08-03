@@ -55,6 +55,7 @@ export class PaymentsService {
     foundPayment.approvedAt = paymentDTO.approvedAt;
     foundPayment.expiresIn = paymentDTO.expiresIn;
     foundPayment.moneyReleaseDate = paymentDTO.moneyReleaseDate;
+    foundPayment.mercadoPagoFee = paymentDTO.mercadoPagoFee;
 
     try {
       await foundPayment.save();

@@ -32,7 +32,7 @@ export class UsersService {
       throw new BadRequestException(`ID de usuário "${id}" inválido`);
     }
 
-    const found = await this.usersModel.findById(id);
+    const found = await this.usersModel.findById(id).select('-roles').exec();
 
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
@@ -90,11 +90,11 @@ export class UsersService {
   async updateUser(
     userBaseDto: UserBaseDto,
     user: UserDocument,
-  ): Promise<UserDocument> {
+  ): Promise<void> {
     const { cpf, email, name, surname, phone } = userBaseDto;
-    // TODO - Atualizar req.user logo depois de atualizar o user
+
     try {
-      const updatedUser = await this.usersModel.findOneAndUpdate(
+      await this.usersModel.findOneAndUpdate(
         { _id: user._id },
         { email, name, surname, cpf, phone },
         { new: true, useFindAndModify: false },
@@ -107,7 +107,6 @@ export class UsersService {
         before: user
       });
       //
-      return updatedUser;
 
     } catch (error) {
       if (error.code === 11000) {

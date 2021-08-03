@@ -12,6 +12,7 @@ import { ShipmentDocument } from '../shipments/models/shipment.schema';
 import { get, findIndex } from 'lodash';
 import { PaymentNotificationDTO } from '../payments/dtos/payment-notification.dto';
 import { PaymentDTO } from '../payments/dtos/payment.dto';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class MercadoPagoService {
@@ -128,7 +129,7 @@ export class MercadoPagoService {
       }
 
       const paymentDTO: PaymentDTO = {
-        order: paymentData.body.external_reference,
+        order: Types.ObjectId(paymentData.body.external_reference),
         mpId: paymentData.body.id,
         status: paymentData.body.status,
         statusDetail: paymentData.body.status_detail,
@@ -139,9 +140,9 @@ export class MercadoPagoService {
         productsAmount: paymentData.body.transaction_amount,
         shippingAmount: paymentData.body.shipping_amount,
         mercadoPagoFee:
-          paymentData.body.fee_details[
-            findIndex(paymentData.body.fee_details, ['type', 'mercadopago_fee'])
-          ].amount,
+          get(paymentData, `body.fee_details[
+            ${findIndex(paymentData.body.fee_details, ['type', 'mercadopago_fee'])}
+          ].amount`, null),
         currencyId: paymentData.body.currency_id,
       };
 

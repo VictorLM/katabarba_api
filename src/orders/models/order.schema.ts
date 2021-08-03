@@ -1,17 +1,17 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { Payment } from '../../payments/models/payment.schema';
 import { ProductDocument } from '../../products/models/product.schema';
 import { Shipment } from '../../shipments/models/shipment.schema';
 import { User } from '../../users/models/user.schema';
 import { OrderStatuses } from '../enums/order-statuses.enum';
 
-export type OrderDocument = Order & Document;
+export type OrderDocument = Order & mongoose.Document;
 
 @Schema({ collection: 'orders', timestamps: true })
 export class Order {
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   })
@@ -30,7 +30,7 @@ export class Order {
   // Para manter o hitórico de preço dos produtos
 
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Shipment',
     required: true,
   })
@@ -41,7 +41,7 @@ export class Order {
   // Para não precisar ficar calculando
 
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment',
     required: false,
     default: null,

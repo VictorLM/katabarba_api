@@ -1,4 +1,4 @@
-import { ProductBoxDimensions } from "../../products/models/product-dimensions.interface";
+import { ProductBoxDimensions } from "../../products/interfaces/product-dimensions.interface";
 
 export class OrderBoxDimensions extends ProductBoxDimensions {
   constructor(

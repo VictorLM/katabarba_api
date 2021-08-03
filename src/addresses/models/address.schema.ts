@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { AddressState } from '../enums/address-state.enum';
 import { User } from '../../users/models/user.schema';
 
-export type AddressDocument = Address & Document;
+export type AddressDocument = Address & mongoose.Document;
 
 @Schema({ collection: 'addresses', timestamps: true })
 export class Address {
@@ -26,7 +26,7 @@ export class Address {
   zipCode: string;
 
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   })

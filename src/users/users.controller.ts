@@ -25,7 +25,7 @@ export class UsersController {
   updateUser(
     @Body() userBaseDto: UserBaseDto,
     @GetUser() user: UserDocument
-  ): Promise<UserDocument> {
+  ): Promise<void> {
     return this.usersService.updateUser(userBaseDto, user);
   }
 

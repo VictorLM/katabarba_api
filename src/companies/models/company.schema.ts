@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { Address } from '../../addresses/models/address.schema';
 import { SocialLinks } from '../interfaces/social-links.interface';
 
-export type CompanyDocument = Company & Document;
+export type CompanyDocument = Company & mongoose.Document;
 
 @Schema({ collection: 'companies', timestamps: true })
 export class Company {
@@ -41,7 +41,7 @@ export class Company {
   social: [SocialLinks];
 
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Address',
     required: true,
   })

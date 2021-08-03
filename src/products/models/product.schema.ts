@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { ProductAndBoxDimensions, ProductBoxDimensions, ProductDimensions } from './product-dimensions.interface';
+import { ProductAndBoxDimensions } from '../interfaces/product-dimensions.interface';
 
 export type ProductDocument = Product & Document;
 
@@ -16,7 +16,7 @@ export class Product {
   category: string;
 
   @Prop({ required: true })
-  images: string[];
+  images: string[]; // TODO - ALTERAR EM TODAS AS REFERÊNCIAS
 
   @Prop({ required: true })
   price: number;
