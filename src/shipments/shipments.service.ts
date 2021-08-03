@@ -81,6 +81,7 @@ export class ShipmentsService {
   }
 
   // TODO - DEFINIR FRETE MÍNIMO
+  // TODO - IF VALUE || DEADLINE = 0
   // TODO - IF PRODUCT FREE SHIPMENT
   async publicGetShipmentsCosts(
     publicGetShipmentCostsDTO: PublicGetShipmentCostsDTO,

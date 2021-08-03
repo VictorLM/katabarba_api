@@ -163,24 +163,13 @@ export class OrdersService {
     const foundOrder = await this.getOrderById(
       Types.ObjectId(String(payment.order)),
     );
-
-    foundOrder.payment = foundOrder.payment ?? payment._id;
+    // Pode ser que o primeiro pagamento seja rejeitado e um segundo aprovado
+    // Desta forma vai ser mantido o vínculo com o mais novo
+    foundOrder.payment = payment._id;
 
     if (payment.status === PaymentStatuses.approved) {
       foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;
-
-    } else if (
-      payment.status === PaymentStatuses.rejected ||
-      payment.status === PaymentStatuses.cancelled ||
-      payment.status === PaymentStatuses.refunded ||
-      payment.status === PaymentStatuses.charged_back
-    ) {
-      foundOrder.status = OrderStatuses.CANCELED;
-
-    } else { // pending, authorized, in_process, in_mediation
-      foundOrder.status = OrderStatuses.AWAITING_PAYMENT;
     }
-
     // TODO - DISPATCH EVENT ORDER UPDATED
 
     // Já está sendo chamada dentro de um bloco Try Catch
