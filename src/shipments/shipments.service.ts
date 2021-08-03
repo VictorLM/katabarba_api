@@ -62,7 +62,7 @@ export class ShipmentsService {
     );
 
     const newShipment = new this.shipmentsModel({
-      shiptAddress: shiptCompanyAddress._id,
+      shiptAddress: shiptCompanyAddress,
       deliveryAddress,
       company: shippingCompany,
       type: shipmentCostAndDeadline.type,

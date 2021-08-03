@@ -1,22 +1,22 @@
 import { Prop,  Schema, SchemaFactory,  } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { Order } from '../../orders/models/order.schema';
 import { PaymentStatuses } from '../enums/payment-statuses.enum';
 import { PaymentTypeIds } from '../enums/payment-type-ids.enum';
 
-export type PaymentDocument = Payment & Document;
+export type PaymentDocument = Payment & mongoose.Document;
 
 @Schema({ collection: 'payments', timestamps: true })
 export class Payment {
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
     required: true,
   })
   order: Order; // MP Preference external_reference
 
   @Prop({ required: true })
-  mpId: string; // Mercado Pago ID
+  mpId: number; // Mercado Pago ID
 
   @Prop({
     required: true,
@@ -28,12 +28,9 @@ export class Payment {
   statusDetail: string;
 
   @Prop({ required: false, default: null })
-  description: string;
-
-  @Prop({ required: false, default: null })
   approvedAt: Date;
 
-  @Prop({ required: true })
+  @Prop({ required: false, default: null })
   expiresIn: Date;
 
   @Prop({ required: false, default: null })
@@ -46,7 +43,16 @@ export class Payment {
   paymentTypeId: PaymentTypeIds;
 
   @Prop({ required: true })
-  transactionAmount: number;
+  productsAmount: number;
+
+  @Prop({ required: true })
+  shippingAmount: number;
+
+  @Prop({ required: false, default: null })
+  mercadoPagoFee: number;
+
+  @Prop({ required: true })
+  currencyId: string;
 
 }
 

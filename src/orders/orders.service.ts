@@ -1,14 +1,16 @@
 import {
+  BadRequestException,
   forwardRef,
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ProductsService } from '../products/products.service';
 import { UserDocument } from '../users/models/user.schema';
-import { OrderStatuses } from './models/order-statuses.enum';
+import { OrderStatuses } from './enums/order-statuses.enum';
 import { Order, OrderDocument } from './models/order.schema';
 import { CreateOrderDto } from './dtos/order.dto';
 import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
@@ -16,6 +18,8 @@ import { AddressesService } from '../addresses/addresses.service';
 import { ShipmentsService } from '../shipments/shipments.service';
 import { ProductFullOrder } from '../products/dtos/product.dto';
 import { MercadoPagoService } from '../mercado-pago/mercado-pago.service';
+import { PaymentDocument } from '../payments/models/payment.schema';
+import { PaymentStatuses } from '../payments/enums/payment-statuses.enum';
 
 @Injectable()
 export class OrdersService {
@@ -28,15 +32,33 @@ export class OrdersService {
     private mercadoPagoService: MercadoPagoService,
   ) {}
 
+  async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID do Pedido "${id}" inválido`);
+    }
+
+    const foundOrder = await this.ordersModel.findById(id);
+
+    if (!foundOrder) {
+      throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
+    }
+
+    return foundOrder;
+  }
+
   async createOrderAndGetMpPreferenceId(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
   ): Promise<{ mpPreferenceId: string }> {
-    const foundUserAddress = await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
-    const productsAndQuantities = await this.productsService.getProductsAndQuantitiesById(
-      createOrderDto.productsIdsAndQuanties,
+    const foundUserAddress =
+      await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
+    const productsAndQuantities =
+      await this.productsService.getProductsAndQuantitiesById(
+        createOrderDto.productsIdsAndQuanties,
+      );
+    this.productsService.checkProductsStockAndAvailability(
+      productsAndQuantities,
     );
-    this.productsService.checkProductsStockAndAvailability(productsAndQuantities);
     const { shippingCompany, shippingType } = createOrderDto;
 
     const newShipment = await this.shipmentsService.createShipment({
@@ -46,7 +68,10 @@ export class OrdersService {
       productsAndQuantities,
     });
 
-    const orderTotalPrice = this.getOrderTotalPrice(productsAndQuantities, newShipment.cost);
+    const orderTotalPrice = this.getOrderTotalPrice(
+      productsAndQuantities,
+      newShipment.cost,
+    );
 
     const newOrder = new this.ordersModel({
       user,
@@ -60,22 +85,24 @@ export class OrdersService {
       await newOrder.save();
 
       // NEW MP PREFERENCE WITH ORDER ID
-      const mpPreferenceId = await this.mercadoPagoService.createPreferenceWithOrderId(newOrder);
+      const mpPreferenceId =
+        await this.mercadoPagoService.createPreferenceWithOrderId(
+          newOrder,
+          newShipment,
+        );
 
       newOrder.mpPreferenceId = mpPreferenceId.mpPreferenceId;
 
       await newOrder.save();
 
       return mpPreferenceId;
-
-    } catch(error) {
+    } catch (error) {
       // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
       console.log(error);
-      // TODO - ABORTS?
-      throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
+      throw new InternalServerErrorException(
+        'Erro ao processar novo pedido. Por favor, tente novamente mais tarde',
+      );
     }
-
-
   }
 
   getOrderDimensions(
@@ -118,13 +145,46 @@ export class OrdersService {
     return Math.round(orderWeight * 100) / 100;
   }
 
-  getOrderTotalPrice(orderProducts: ProductFullOrder[], shippingTax: number): number  {
+  getOrderTotalPrice(
+    orderProducts: ProductFullOrder[],
+    shippingTax: number,
+  ): number {
     let orderTotalPrice = 0;
     orderProducts.forEach(
       (product) =>
-        (orderTotalPrice = orderTotalPrice + product.quantity * product.product.price),
+        (orderTotalPrice =
+          orderTotalPrice + product.quantity * product.product.price),
     );
     return orderTotalPrice + shippingTax;
+  }
+
+  async updateOrderWithPaymentData(payment: PaymentDocument): Promise<void> {
+    // GAMB VIOLENTA - Não sei porque o type do campo Order está pegando o Objeto não o ObjectId
+    const foundOrder = await this.getOrderById(
+      Types.ObjectId(String(payment.order)),
+    );
+
+    foundOrder.payment = foundOrder.payment ?? payment._id;
+
+    if (payment.status === PaymentStatuses.approved) {
+      foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;
+
+    } else if (
+      payment.status === PaymentStatuses.rejected ||
+      payment.status === PaymentStatuses.cancelled ||
+      payment.status === PaymentStatuses.refunded ||
+      payment.status === PaymentStatuses.charged_back
+    ) {
+      foundOrder.status = OrderStatuses.CANCELED;
+
+    } else { // pending, authorized, in_process, in_mediation
+      foundOrder.status = OrderStatuses.AWAITING_PAYMENT;
+    }
+
+    // TODO - DISPATCH EVENT ORDER UPDATED
+
+    // Já está sendo chamada dentro de um bloco Try Catch
+    await foundOrder.save();
   }
 
 }

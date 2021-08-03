@@ -96,17 +96,8 @@ export class UsersService {
     try {
       const updatedUser = await this.usersModel.findOneAndUpdate(
         { _id: user._id },
-        {
-          email,
-          name,
-          surname,
-          cpf,
-          phone,
-        },
-        {
-          new: true,
-          useFindAndModify: false,
-        },
+        { email, name, surname, cpf, phone },
+        { new: true, useFindAndModify: false },
       );
       // Log changes
       await this.changesService.createChange({

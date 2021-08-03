@@ -1,6 +1,6 @@
 export enum PaymentStatuses {
-  pending = 'pending',
   approved = 'approved',
+  pending = 'pending',
   authorized = 'authorized',
   in_process = 'in_process',
   in_mediation = 'in_mediation',

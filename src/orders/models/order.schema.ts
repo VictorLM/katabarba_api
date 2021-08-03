@@ -1,10 +1,10 @@
-import { Prop,  Schema, SchemaFactory,  } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Payment } from '../../payments/models/payment.schema';
 import { ProductDocument } from '../../products/models/product.schema';
 import { Shipment } from '../../shipments/models/shipment.schema';
 import { User } from '../../users/models/user.schema';
-import { OrderStatuses } from './order-statuses.enum';
+import { OrderStatuses } from '../enums/order-statuses.enum';
 
 export type OrderDocument = Order & Document;
 
@@ -21,10 +21,12 @@ export class Order {
   mpPreferenceId: string; // Mercado Pago Preference ID
 
   @Prop({ required: true })
-  productsAndQuantities: [{
-    product: ProductDocument,
-    quantity: number;
-  }];
+  productsAndQuantities: [
+    {
+      product: ProductDocument;
+      quantity: number;
+    },
+  ];
   // Para manter o hitórico de preço dos produtos
 
   @Prop({
@@ -46,9 +48,10 @@ export class Order {
   })
   payment: Payment;
 
-  @Prop({ required: false,
+  @Prop({
+    required: false,
     enum: OrderStatuses,
-    default: OrderStatuses.AWAITING_PAYMENT
+    default: OrderStatuses.AWAITING_PAYMENT,
   })
   status: OrderStatuses;
 

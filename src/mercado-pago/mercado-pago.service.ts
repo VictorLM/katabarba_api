@@ -1,8 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as MercadoPago from 'mercadopago';
 import { ConfigService } from '@nestjs/config';
 import { OrderDocument } from '../orders/models/order.schema';
-import { CreatePreferencePayload, PreferenceItem, PreferencePayer, PreferenceShipment } from 'mercadopago/models/preferences/create-payload.model';
+import {
+  CreatePreferencePayload,
+  PreferenceItem,
+  PreferencePayer,
+  PreferenceShipment,
+} from 'mercadopago/models/preferences/create-payload.model';
+import { ShipmentDocument } from '../shipments/models/shipment.schema';
+import { get, findIndex } from 'lodash';
+import { PaymentNotificationDTO } from '../payments/dtos/payment-notification.dto';
+import { PaymentDTO } from '../payments/dtos/payment.dto';
 
 @Injectable()
 export class MercadoPagoService {
@@ -13,18 +22,15 @@ export class MercadoPagoService {
     });
   }
 
-  // TODO - IPN URL https://www.mercadopago.com.br/developers/panel/notifications/ipn
-
-  // TODO - ERROR HANDLING
-  // TODO - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
+  // TODO - WEBHOOKS URL PAINEL - TIPO PAGAMENTOS
+  // TODO - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK - CRON
   async createPreferenceWithOrderId(
     order: OrderDocument,
+    shipment: ShipmentDocument, // TO DELETE() IF ERROR
   ): Promise<{ mpPreferenceId: string }> {
-
     const items: PreferenceItem[] = [];
 
-    order.productsAndQuantities.forEach(productAndQuantity => {
-
+    order.productsAndQuantities.forEach((productAndQuantity) => {
       items.push({
         id: String(productAndQuantity.product._id),
         title: productAndQuantity.product.name,
@@ -35,7 +41,6 @@ export class MercadoPagoService {
         currency_id: 'BRL',
         unit_price: productAndQuantity.product.price,
       });
-
     });
 
     const payer: PreferencePayer = {
@@ -47,14 +52,15 @@ export class MercadoPagoService {
         number: String(order.user.cpf),
       },
       address: {
-        zip_code: order.shippment.deliveryAddress['zipCode'],
-        street_name: order.shippment.deliveryAddress['street'],
-        street_number: order.shippment.deliveryAddress['number'],
-      }
+        zip_code: shipment.deliveryAddress['zipCode'],
+        street_name: shipment.deliveryAddress['street'],
+        street_number: shipment.deliveryAddress['number'],
+      },
     };
 
     const shipments: PreferenceShipment = {
-      cost: order.shippment.cost,
+      cost: shipment.cost,
+      mode: 'not_specified',
     };
 
     const expirationDate = this.getPreferenceExpirationDate();
@@ -64,26 +70,40 @@ export class MercadoPagoService {
       payer,
       shipments,
       external_reference: String(order._id),
+      statement_descriptor: 'KataBarba',
       expires: true,
       expiration_date_to: expirationDate,
       marketplace: this.configService.get('MARKETPLACE_NAME'),
-      notification_url: 'https://webhook.site/9be0df76-379d-4932-aec7-7cd00cbd2616?source_news=webhooks',
-      // TODO - TEMP - CONFIG IPN EM PRODUÇÃO
     };
 
     try {
       const response = await MercadoPago.preferences.create(preference);
 
-      //////// CHECK TOTAL PRICE ===
+      console.log(response.body); // TODO - COMMENT
 
-      console.log(response.body);
+      const mpPreferenceId = get(response, 'body.id', '');
 
-      return { mpPreferenceId: response.body.id }; // Preference ID
+      if (!mpPreferenceId) {
+        // TODO - LOG ERROR - EVENT
+        console.log(response);
+        await order.delete();
+        await shipment.delete();
+        throw new InternalServerErrorException(
+          'Erro ao processar o pedido. Tente novamente mais tarde. Error: 1',
+        );
+      }
 
-    } catch(error) {
-      console.log(error);
+      return { mpPreferenceId };
+    } catch (error) {
+      console.error(error);
+      // TODO - LOG ERROR - EVENT
+      await order.delete();
+      await shipment.delete();
+
+      throw new InternalServerErrorException(
+        'Erro ao processar o pedido. Tente novamente mais tarde. Error: 2',
+      );
     }
-
   }
 
   // TODO - FALAR C/ JOW
@@ -92,8 +112,47 @@ export class MercadoPagoService {
     const date = new Date();
     date.setDate(date.getDate() + 7);
     // FUSO BRAZIL - UTC-3
-    const formatedDate = String(date.toISOString().replace('Z','-03:00'));
+    const formatedDate = String(date.toISOString().replace('Z', '-03:00'));
     return formatedDate;
   }
 
+  async getPaymentData(
+    paymentNotificationDTO: PaymentNotificationDTO,
+  ): Promise<PaymentDTO> {
+
+    try {
+      const paymentData = await MercadoPago.payment.get(Number(paymentNotificationDTO.data.id));
+
+      if (paymentData.status !== 200) {
+        throw new InternalServerErrorException();
+      }
+
+      const paymentDTO: PaymentDTO = {
+        order: paymentData.body.external_reference,
+        mpId: paymentData.body.id,
+        status: paymentData.body.status,
+        statusDetail: paymentData.body.status_detail,
+        approvedAt: paymentData.body.date_approved,
+        expiresIn: paymentData.body.date_of_expiration,
+        moneyReleaseDate: paymentData.body.money_release_date,
+        paymentTypeId: paymentData.body.payment_type_id,
+        productsAmount: paymentData.body.transaction_amount,
+        shippingAmount: paymentData.body.shipping_amount,
+        mercadoPagoFee:
+          paymentData.body.fee_details[
+            findIndex(paymentData.body.fee_details, ['type', 'mercadopago_fee'])
+          ].amount,
+        currencyId: paymentData.body.currency_id,
+      };
+
+      // console.log(paymentDTO);
+
+      return paymentDTO;
+
+    } catch (error) {
+      // TODO LOG - ESSE ERRO É IMPORTANTÍSSIMO TAMBÉM
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+  }
 }

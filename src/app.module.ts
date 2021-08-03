@@ -14,6 +14,8 @@ import { AddressesModule } from './addresses/addresses.module';
 import { CompaniesModule } from './companies/companies.module';
 import { PaymentsModule } from './payments/payments.module';
 import { MercadoPagoModule } from './mercado-pago/mercado-pago.module';
+import { AdminModule } from './admin/admin.module';
+import { EmailsModule } from './emails/emails.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { MercadoPagoModule } from './mercado-pago/mercado-pago.module';
     CompaniesModule,
     PaymentsModule,
     MercadoPagoModule,
+    AdminModule,
+    EmailsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

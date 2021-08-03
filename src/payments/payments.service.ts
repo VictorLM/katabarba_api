@@ -1,14 +1,108 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MercadoPagoService } from '../mercado-pago/mercado-pago.service';
+import { PaymentDTO } from './dtos/payment.dto';
+import { PaymentNotificationDTO } from './dtos/payment-notification.dto';
 import { Payment, PaymentDocument } from './models/payment.schema';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     @InjectModel(Payment.name) private paymentsModel: Model<PaymentDocument>,
+    private mercadoPagoService: MercadoPagoService,
+    private ordersService: OrdersService,
   ) {}
 
-  // webhook (IPN)
+  async handlePaymentNotificationWebHook(
+    paymentNotificationDTO: PaymentNotificationDTO,
+  ): Promise<void> {
+    const paymentDTO = await this.mercadoPagoService.getPaymentData(paymentNotificationDTO);
+
+    const foundPayment = await this.paymentsModel.findOne({ mpId: paymentDTO.mpId });
+
+    // Fazendo dessa forma porque o upsert não deu certo
+    if(foundPayment) {
+      await this.updatePayment(foundPayment, paymentDTO);
+    } else {
+      await this.createPayment(paymentDTO);
+    }
+
+  }
+
+  async createPayment(paymentDTO: PaymentDTO): Promise<void> {
+    const newPayment = new this.paymentsModel(paymentDTO);
+
+    try {
+      await newPayment.save();
+      await this.ordersService.updateOrderWithPaymentData(newPayment);
+
+    } catch (error) {
+      // TODO LOG
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async updatePayment(
+    foundPayment: PaymentDocument,
+    paymentDTO: PaymentDTO,
+  ): Promise<void> {
+
+    foundPayment.status = paymentDTO.status;
+    foundPayment.statusDetail = paymentDTO.statusDetail;
+    foundPayment.approvedAt = paymentDTO.approvedAt;
+    foundPayment.expiresIn = paymentDTO.expiresIn;
+    foundPayment.moneyReleaseDate = paymentDTO.moneyReleaseDate;
+
+    try {
+      await foundPayment.save();
+      await this.ordersService.updateOrderWithPaymentData(foundPayment);
+
+    } catch (error) {
+      // TODO LOG
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+
+  }
 
 }
+
+// TODO - DELETE
+// const { // Não deu certo meter o createPaymentDTO direto como query de update
+      //   order,
+      //   mpId,
+      //   status,
+      //   statusDetail,
+      //   approvedAt,
+      //   expiresIn,
+      //   moneyReleaseDate,
+      //   paymentTypeId,
+      //   productsAmount,
+      //   shippingAmount,
+      //   mercadoPagoFee,
+      //   currencyId,
+      //  } = createPaymentDTO;
+
+      // // TODO - ATUALIZAR UPDATEONE NO USERS SERVICES
+      // const upsertedPayment = await this.paymentsModel.updateOne(
+      //   { mpId: createPaymentDTO.mpId },
+      //   { $set: {
+      //       order,
+      //       mpId,
+      //       status,
+      //       statusDetail,
+      //       approvedAt,
+      //       expiresIn,
+      //       moneyReleaseDate,
+      //       paymentTypeId,
+      //       productsAmount,
+      //       shippingAmount,
+      //       mercadoPagoFee,
+      //       currencyId,
+      //     }
+      //    },
+      //   { upsert: true },
+      // );
