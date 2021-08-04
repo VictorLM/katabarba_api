@@ -6,6 +6,8 @@ import { PaymentDTO } from './dtos/payment.dto';
 import { PaymentNotificationDTO } from './dtos/payment-notification.dto';
 import { Payment, PaymentDocument } from './models/payment.schema';
 import { OrdersService } from '../orders/orders.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PaymentCreatedEvent } from './events/payment.events';
 
 @Injectable()
 export class PaymentsService {
@@ -13,6 +15,7 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentsModel: Model<PaymentDocument>,
     private mercadoPagoService: MercadoPagoService,
     private ordersService: OrdersService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async handlePaymentNotificationWebHook(
@@ -37,6 +40,11 @@ export class PaymentsService {
     try {
       await newPayment.save();
       await this.ordersService.updateOrderWithPaymentData(newPayment);
+      // Event
+      this.eventEmitter.emit(
+        'payment.created',
+        new PaymentCreatedEvent(newPayment),
+      );
 
     } catch (error) {
       // TODO LOG

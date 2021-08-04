@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 import { MercadoPagoModule } from '../mercado-pago/mercado-pago.module';
 import { OrdersModule } from '../orders/orders.module';
+import { PaymentCreatedListener } from './listeners/payment-created.listener';
 
 @Module({
   imports:[
@@ -14,7 +15,7 @@ import { OrdersModule } from '../orders/orders.module';
       { name: Payment.name, schema: PaymentSchema },
     ]),
   ],
-  providers: [PaymentsService],
+  providers: [PaymentsService, PaymentCreatedListener],
   controllers: [PaymentsController]
 })
 export class PaymentsModule {}

@@ -1,6 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-// import { AllExceptionsFilter } from './all-exceptions.filter';
+import { AllExceptionsFilter } from './all-exceptions.filter';
 import { AppModule } from './app.module';
 // import { MyLogger } from './custom.logger';
 
@@ -11,8 +11,8 @@ async function bootstrap() {
   // Class Validator
   app.useGlobalPipes(new ValidationPipe());
   // Catch all exceptions
-  // const { httpAdapter } = app.get(HttpAdapterHost);
-  // app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
   await app.listen(3000);
 }

@@ -9,7 +9,7 @@ import {
   PreferenceShipment,
 } from 'mercadopago/models/preferences/create-payload.model';
 import { ShipmentDocument } from '../shipments/models/shipment.schema';
-import { get, findIndex } from 'lodash';
+import { get, findIndex, isArray } from 'lodash';
 import { PaymentNotificationDTO } from '../payments/dtos/payment-notification.dto';
 import { PaymentDTO } from '../payments/dtos/payment.dto';
 import { Types } from 'mongoose';
@@ -23,8 +23,8 @@ export class MercadoPagoService {
     });
   }
 
-  // TODO - WEBHOOKS URL PAINEL - TIPO PAGAMENTOS
-  // TODO - IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK - CRON
+  // TODO - WEBHOOKS URL PAINEL MP - TIPO > PAGAMENTOS
+  // TODO - SCHEDULE > IF !PAYMENT CANCEL ORDER AND UPDATE PRODUCTS STOCK
   async createPreferenceWithOrderId(
     order: OrderDocument,
     shipment: ShipmentDocument, // TO DELETE() IF ERROR
@@ -79,9 +79,7 @@ export class MercadoPagoService {
 
     try {
       const response = await MercadoPago.preferences.create(preference);
-
       console.log(response.body); // TODO - COMMENT
-
       const mpPreferenceId = get(response, 'body.id', '');
 
       if (!mpPreferenceId) {
@@ -95,6 +93,7 @@ export class MercadoPagoService {
       }
 
       return { mpPreferenceId };
+
     } catch (error) {
       console.error(error);
       // TODO - LOG ERROR - EVENT
@@ -120,9 +119,10 @@ export class MercadoPagoService {
   async getPaymentData(
     paymentNotificationDTO: PaymentNotificationDTO,
   ): Promise<PaymentDTO> {
-
     try {
-      const paymentData = await MercadoPago.payment.get(Number(paymentNotificationDTO.data.id));
+      const paymentData = await MercadoPago.payment.get(
+        Number(paymentNotificationDTO.data.id),
+      );
 
       if (paymentData.status !== 200) {
         throw new InternalServerErrorException();
@@ -139,15 +139,20 @@ export class MercadoPagoService {
         paymentTypeId: paymentData.body.payment_type_id,
         productsAmount: paymentData.body.transaction_amount,
         shippingAmount: paymentData.body.shipping_amount,
-        mercadoPagoFee:
-          get(paymentData, `body.fee_details[
-            ${findIndex(paymentData.body.fee_details, ['type', 'mercadopago_fee'])}
-          ].amount`, null),
         currencyId: paymentData.body.currency_id,
+        mercadoPagoFee:
+          isArray(paymentData.body.fee_details) &&
+          paymentData.body.fee_details.length > 0
+            ? paymentData.body.fee_details[
+                findIndex(paymentData.body.fee_details, [
+                  'type',
+                  'mercadopago_fee',
+                ])
+              ].amount
+            : null,
       };
 
       // console.log(paymentDTO);
-
       return paymentDTO;
 
     } catch (error) {

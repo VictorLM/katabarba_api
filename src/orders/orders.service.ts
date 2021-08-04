@@ -95,6 +95,11 @@ export class OrdersService {
 
       await newOrder.save();
 
+      // UPDATE PRODUCTS STOCK
+      await this.productsService.updateProductsStockByOrderProductsAndQuantities(
+        productsAndQuantities,
+      );
+
       return mpPreferenceId;
     } catch (error) {
       // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
@@ -175,5 +180,4 @@ export class OrdersService {
     // Já está sendo chamada dentro de um bloco Try Catch
     await foundOrder.save();
   }
-
 }

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -88,9 +89,22 @@ export class ProductsService {
     });
   }
 
-  async updateProductsStockByOrder(order: OrderDocument): Promise<void> {
-    // TODO
-    return
+  async updateProductsStockByOrderProductsAndQuantities(
+    orderProductsAndQuantities: ProductFullOrder[],
+  ): Promise<void> {
+
+    try {
+      orderProductsAndQuantities.forEach(async (product) => {
+        product.product.stock = product.product.stock - product.quantity;
+        await product.product.save();
+      });
+
+    } catch (error) {
+      // TODO - ERRO DB > E-MAIL
+      console.log(error);
+
+    }
+
   }
 
     // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
