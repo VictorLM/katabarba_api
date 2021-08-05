@@ -20,6 +20,7 @@ import { ProductFullOrder } from '../products/dtos/product.dto';
 import { MercadoPagoService } from '../mercado-pago/mercado-pago.service';
 import { PaymentDocument } from '../payments/models/payment.schema';
 import { PaymentStatuses } from '../payments/enums/payment-statuses.enum';
+import { ErrorsService } from '../errors/errors.service';
 
 @Injectable()
 export class OrdersService {
@@ -30,6 +31,7 @@ export class OrdersService {
     @Inject(forwardRef(() => ShipmentsService))
     private shipmentsService: ShipmentsService,
     private mercadoPagoService: MercadoPagoService,
+    private errorsService: ErrorsService,
   ) {}
 
   async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {
@@ -82,6 +84,7 @@ export class OrdersService {
     });
 
     try {
+      // throw new InternalServerErrorException();
       await newOrder.save();
 
       // NEW MP PREFERENCE WITH ORDER ID
@@ -101,9 +104,14 @@ export class OrdersService {
       );
 
       return mpPreferenceId;
+
     } catch (error) {
       // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
       console.log(error);
+
+      // Log error into DB - not await
+      this.errorsService.createAppError(user._id, 'teste de mensagem', error);
+
       throw new InternalServerErrorException(
         'Erro ao processar novo pedido. Por favor, tente novamente mais tarde',
       );

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -17,10 +16,10 @@ import { PaymentsModule } from './payments/payments.module';
 import { MercadoPagoModule } from './mercado-pago/mercado-pago.module';
 import { AdminModule } from './admin/admin.module';
 import { EmailsModule } from './emails/emails.module';
+import { ErrorsModule } from './errors/errors.module';
 
 @Module({
   imports: [
-    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       envFilePath: [`.env.stage.${process.env.STAGE}`],
     }),
@@ -47,6 +46,7 @@ import { EmailsModule } from './emails/emails.module';
     MercadoPagoModule,
     AdminModule,
     EmailsModule,
+    ErrorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
