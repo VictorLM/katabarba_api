@@ -5,9 +5,11 @@ import { User, UserSchema } from './models/user.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { ChangesModule } from '../changes/changes.module';
+import { ErrorsModule } from '../errors/errors.module';
 
 @Module({
   imports: [
+    ErrorsModule,
     forwardRef(() => AuthModule),
     ChangesModule,
     MongooseModule.forFeature([

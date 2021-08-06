@@ -22,6 +22,19 @@ export class AppError {
 
   @Prop({ required: true })
   action: string;
+
+  @Prop({
+    type: {},
+    required: false,
+    default: null
+  })
+  model: any;
+
+  @Prop({ required: false, default: null })
+  checked: Date;
+
+  @Prop({ required: false, default: null })
+  notes: string;
 }
 
 export const AppErrorSchema = SchemaFactory.createForClass(AppError);

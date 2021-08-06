@@ -21,6 +21,7 @@ import { MercadoPagoService } from '../mercado-pago/mercado-pago.service';
 import { PaymentDocument } from '../payments/models/payment.schema';
 import { PaymentStatuses } from '../payments/enums/payment-statuses.enum';
 import { ErrorsService } from '../errors/errors.service';
+import { ShipmentDocument } from '../shipments/models/shipment.schema';
 
 @Injectable()
 export class OrdersService {
@@ -38,33 +39,30 @@ export class OrdersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
-
     const foundOrder = await this.ordersModel.findById(id);
-
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
-
     return foundOrder;
   }
 
-  async createOrderAndGetMpPreferenceId(
+  async handleNewOrder(
     createOrderDto: CreateOrderDto,
     user: UserDocument,
   ): Promise<{ mpPreferenceId: string }> {
-    const foundUserAddress =
+
+    const { productsIdsAndQuanties, shippingCompany, shippingType } = createOrderDto;
+
+    const deliveryAddress =
       await this.addressesService.getAddressByUserAndErrorIfNotExists(user);
+
     const productsAndQuantities =
       await this.productsService.getProductsAndQuantitiesById(
-        createOrderDto.productsIdsAndQuanties,
+        productsIdsAndQuanties,
       );
-    this.productsService.checkProductsStockAndAvailability(
-      productsAndQuantities,
-    );
-    const { shippingCompany, shippingType } = createOrderDto;
 
     const newShipment = await this.shipmentsService.createShipment({
-      deliveryAddress: foundUserAddress,
+      deliveryAddress,
       shippingCompany,
       shippingType,
       productsAndQuantities,
@@ -75,47 +73,67 @@ export class OrdersService {
       newShipment.cost,
     );
 
+    const newOrder = await this.createOrder(
+      user,
+      productsAndQuantities,
+      newShipment,
+      orderTotalPrice,
+    );
+
+    // New Mercado Pago Preference with Order ID as External Reference
+    // If fails, deletes the new order and shipment
+    const mpPreferenceId =
+      await this.mercadoPagoService.createPreferenceWithOrderId(
+        newOrder,
+        newShipment,
+      );
+
+    // not await
+    this.updateOrderWithMpPreferenceId(newOrder, mpPreferenceId);
+
+    // Update products stock - not await
+    this.productsService.updateProductsStockByOrderProductsAndQuantities(
+      productsAndQuantities,
+    );
+
+    return { mpPreferenceId };
+  }
+
+  async createOrder(
+    user: UserDocument,
+    productsAndQuantities: ProductFullOrder[],
+    shipment: ShipmentDocument,
+    totalPrice: number,
+  ): Promise<OrderDocument> {
+
     const newOrder = new this.ordersModel({
       user,
       productsAndQuantities,
-      shippment: newShipment,
-      totalPrice: orderTotalPrice,
+      shipment,
+      totalPrice,
       status: OrderStatuses.AWAITING_PAYMENT,
     });
 
     try {
-      // throw new InternalServerErrorException();
-      await newOrder.save();
-
-      // NEW MP PREFERENCE WITH ORDER ID
-      const mpPreferenceId =
-        await this.mercadoPagoService.createPreferenceWithOrderId(
-          newOrder,
-          newShipment,
-        );
-
-      newOrder.mpPreferenceId = mpPreferenceId.mpPreferenceId;
-
-      await newOrder.save();
-
-      // UPDATE PRODUCTS STOCK
-      await this.productsService.updateProductsStockByOrderProductsAndQuantities(
-        productsAndQuantities,
-      );
-
-      return mpPreferenceId;
+      return await newOrder.save();
 
     } catch (error) {
-      // TODO - ERRO DB > E-MAIL - ESSE ERRO É URGENTE DE SER VERIFICADO
       console.log(error);
+      await shipment.delete();
 
       // Log error into DB - not await
-      this.errorsService.createAppError(user._id, 'teste de mensagem', error);
+      this.errorsService.createAppError(
+        user._id,
+        'OrdersService.createOrder',
+        error,
+        newOrder,
+      );
 
       throw new InternalServerErrorException(
         'Erro ao processar novo pedido. Por favor, tente novamente mais tarde',
       );
     }
+
   }
 
   getOrderDimensions(
@@ -171,6 +189,25 @@ export class OrdersService {
     return orderTotalPrice + shippingTax;
   }
 
+  async updateOrderWithMpPreferenceId(
+    order: OrderDocument,
+    mpPreferenceId: string,
+  ): Promise<void> {
+    order.mpPreferenceId = mpPreferenceId;
+    try {
+      await order.save();
+
+    } catch(error) {
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'OrdersService.updateOrderWithMpPreferenceId',
+        error,
+        order,
+      );
+    }
+  }
+
   async updateOrderWithPaymentData(payment: PaymentDocument): Promise<void> {
     // GAMB VIOLENTA - Não sei porque o type do campo Order está pegando o Objeto não o ObjectId
     const foundOrder = await this.getOrderById(
@@ -183,9 +220,21 @@ export class OrdersService {
     if (payment.status === PaymentStatuses.approved) {
       foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;
     }
-    // TODO - DISPATCH EVENT ORDER UPDATED
 
-    // Já está sendo chamada dentro de um bloco Try Catch
-    await foundOrder.save();
+    try {
+      await foundOrder.save();
+
+    } catch(error) {
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'OrdersService.updateOrderWithPaymentData',
+        error,
+        foundOrder,
+      );
+
+      throw new InternalServerErrorException();
+    }
   }
+
 }

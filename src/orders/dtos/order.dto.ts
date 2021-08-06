@@ -13,6 +13,7 @@ export class CreateOrderDto extends ProductsIdsAndQuanties {
   readonly shippingType: ShippingTypes;
 }
 
+// TODO
 // Acho que não será necessário DTO para atualizar
 // Porque não ter atualização manual
 // Por enquanto

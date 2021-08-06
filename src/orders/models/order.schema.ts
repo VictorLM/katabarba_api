@@ -34,7 +34,7 @@ export class Order {
     ref: 'Shipment',
     required: true,
   })
-  shippment: Shipment;
+  shipment: Shipment;
 
   @Prop({ required: true })
   totalPrice: number;

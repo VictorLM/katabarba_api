@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ChangesService } from '../changes/changes.service';
+import { ErrorsService } from '../errors/errors.service';
 import { UserDocument } from '../users/models/user.schema';
 import { AddressDto } from './dtos/address.dto';
 import { Address, AddressDocument } from './models/address.schema';
@@ -11,6 +12,7 @@ export class AddressesService {
   constructor(
     @InjectModel(Address.name) private addressesModel: Model<AddressDocument>,
     private changesService: ChangesService,
+    private errorsService: ErrorsService,
   ) {}
 
   async getAddressByUserAndErrorIfNotExists(user: UserDocument): Promise<AddressDocument> {
@@ -22,6 +24,8 @@ export class AddressesService {
   }
 
   private async getAddressByUser(user: UserDocument): Promise<AddressDocument> {
+    // Não levantando error para checar if empty
+    // Para levantar erro usar o método acima getAddressByUserAndErrorIfNotExists()
     return await this.addressesModel.findOne({ user: user._id });
   }
 
@@ -53,9 +57,27 @@ export class AddressesService {
         complement,
         state,
         zipCode,
-        user: user._id,
+        user,
       });
-      return await newAddress.save();
+
+      try {
+        return await newAddress.save();
+
+      } catch (error) {
+        console.log(error);
+
+        // Log error into DB - not await
+        this.errorsService.createAppError(
+          user._id,
+          'AddressesService.createAddress',
+          error,
+          newAddress,
+        );
+
+        throw new InternalServerErrorException(
+          'Erro ao salvar novo Endereço. Por favor, tente novamente mais tarde',
+        );
+      }
 
     } else {
       throw new ConflictException('Usuário já tem endereço cadastrado');
@@ -70,13 +92,13 @@ export class AddressesService {
 
     if(foundAddress) {
       const { street, number, complement, city, state, zipCode } = addressDto;
-      // Log changes
-      await this.changesService.createChange({
-        user: user._id,
-        collectionName: 'addresses',
-        type: 'Address Update',
-        before: foundAddress
-      });
+      // Log changes - TODO
+      // await this.changesService.createChange({
+      //   user: user._id,
+      //   collectionName: 'addresses',
+      //   type: 'Address Update',
+      //   before: foundAddress
+      // });
       //
       foundAddress.street = street;
       foundAddress.number = number;
@@ -85,7 +107,24 @@ export class AddressesService {
       foundAddress.state = state;
       foundAddress.zipCode = zipCode;
 
-      return await foundAddress.save();
+      try {
+        return await foundAddress.save();
+
+      } catch (error) {
+        console.log(error);
+
+        // Log error into DB - not await
+        this.errorsService.createAppError(
+          user._id,
+          'AddressesService.updateAddress',
+          error,
+          foundAddress,
+        );
+
+        throw new InternalServerErrorException(
+          'Erro ao atualizar Endereço. Por favor, tente novamente mais tarde',
+        );
+      }
 
     } else {
       throw new NotFoundException(`Nenhum endereço encontrado para o Usuário com ID "${user._id}"`);

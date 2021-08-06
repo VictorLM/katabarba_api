@@ -29,6 +29,7 @@ import {
 import { ShippingTypes } from './enums/shipping-types.enum';
 import { OrderBoxDimensions } from '../orders/interfaces/order-dimensions.interface';
 import { ShippingCompanies } from './enums/shipping-companies.enum';
+import { ErrorsService } from '../errors/errors.service';
 
 @Injectable()
 export class ShipmentsService {
@@ -38,6 +39,7 @@ export class ShipmentsService {
     private productsService: ProductsService,
     @Inject(forwardRef(() => OrdersService))
     private ordersService: OrdersService,
+    private errorsService: ErrorsService,
   ) {}
 
   async createShipment(createShipmentDTO: CreateShipmentDTO): Promise<ShipmentDocument> {
@@ -75,6 +77,13 @@ export class ShipmentsService {
 
     } catch(error) {
       console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'PShipmentsService.createShipment',
+        error,
+        newShipment,
+      );
       throw new InternalServerErrorException('Erro ao criar Remessa. Por favor, tente novamente mais tarde');
     }
 
@@ -143,7 +152,6 @@ export class ShipmentsService {
     return shipmentCostsAndDeadlines;
   }
 
-  // TODO - DEPLOY SERVICE PARA REPORTAR A CADA ERRO LANÇADO
   async getShipmentCostsAndDeadlinesFromCorreios(
     originZipCode: string,
     deliveryZipCode: string,
@@ -167,7 +175,6 @@ export class ShipmentsService {
     return shipmentCostsAndDeadlinesFromCorreios;
   }
 
-  // TODO - DEPLOY SERVICE PARA REPORTAR A CADA ERRO LANÇADO
   async getShipmentCostAndDeadlineFromCorreiosByType(
     originZipCode: string,
     deliveryZipCode: string,
@@ -232,13 +239,20 @@ export class ShipmentsService {
       }
 
       return shipmentCostAndDeadlineFromCorreiosByType;
+
     } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'ShipmentsService.getShipmentCostAndDeadlineFromCorreiosByType',
+        error,
+        params,
+      );
+
       if (error.response) {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
-        console.log(error.response.message);
-        console.log('Error code: ', error.response.status);
-        console.log(error.response);
         throw new InternalServerErrorException(
           `${get(
             error,
@@ -248,20 +262,17 @@ export class ShipmentsService {
         );
       } else if (error.request) {
         // No response
-        console.log('WebService dos Correios não está respondendo');
         throw new ServiceUnavailableException(
           'Erro ao calcular o frete. Serviço indisponível. Por favor, tente novamente mais tarde',
         );
       } else {
         // Something happened in setting up the request that triggered an Error
-        console.log(
-          'Erro ao calcular frete Correios: ',
-          get(error, 'message', 'Erro interno'),
-        );
         throw new InternalServerErrorException(
           `Erro ao calcular o frete. Por favor, tente novamente mais tarde.`,
         );
       }
+
     }
   }
+
 }

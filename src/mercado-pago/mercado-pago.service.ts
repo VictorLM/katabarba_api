@@ -13,10 +13,14 @@ import { get, findIndex, isArray } from 'lodash';
 import { PaymentNotificationDTO } from '../payments/dtos/payment-notification.dto';
 import { PaymentDTO } from '../payments/dtos/payment.dto';
 import { Types } from 'mongoose';
+import { ErrorsService } from '../errors/errors.service';
 
 @Injectable()
 export class MercadoPagoService {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private errorsService: ErrorsService,
+  ) {
     MercadoPago.configure({
       access_token: this.configService.get('MP_ACCESS_TOKEN'),
       sandbox: true, // TODO
@@ -28,7 +32,7 @@ export class MercadoPagoService {
   async createPreferenceWithOrderId(
     order: OrderDocument,
     shipment: ShipmentDocument, // TO DELETE() IF ERROR
-  ): Promise<{ mpPreferenceId: string }> {
+  ): Promise<string> {
     const items: PreferenceItem[] = [];
 
     order.productsAndQuantities.forEach((productAndQuantity) => {
@@ -83,7 +87,7 @@ export class MercadoPagoService {
       const mpPreferenceId = get(response, 'body.id', '');
 
       if (!mpPreferenceId) {
-        // TODO - LOG ERROR - EVENT
+        // Se a resposta vier sem o body.id, não será tratada - TODO
         console.log(response);
         await order.delete();
         await shipment.delete();
@@ -92,11 +96,17 @@ export class MercadoPagoService {
         );
       }
 
-      return { mpPreferenceId };
+      return mpPreferenceId;
 
     } catch (error) {
-      console.error(error);
-      // TODO - LOG ERROR - EVENT
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'MercadoPagoService.createPreferenceWithOrderId',
+        error,
+        null,
+      );
       await order.delete();
       await shipment.delete();
 
@@ -152,12 +162,17 @@ export class MercadoPagoService {
             : null,
       };
 
-      // console.log(paymentDTO);
       return paymentDTO;
 
     } catch (error) {
-      // TODO LOG - ESSE ERRO É IMPORTANTÍSSIMO TAMBÉM
       console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'MercadoPagoService.getPaymentData',
+        error,
+        paymentNotificationDTO,
+      );
       throw new InternalServerErrorException();
     }
   }

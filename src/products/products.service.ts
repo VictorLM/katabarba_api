@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { OrderDocument } from '../orders/models/order.schema';
+import { ErrorsService } from '../errors/errors.service';
 import { ProductFullOrder, ProductOrder } from './dtos/product.dto';
 import { Product, ProductDocument } from './models/product.schema';
 
@@ -14,6 +14,7 @@ import { Product, ProductDocument } from './models/product.schema';
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productsModel: Model<ProductDocument>,
+    private errorsService: ErrorsService,
   ) {}
 
   async getAllProducts(): Promise<ProductDocument[]> {
@@ -32,9 +33,7 @@ export class ProductsService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de produto "${id}" inválido`);
     }
-
     const found = await this.productsModel.findById(id);
-
     if (!found) {
       throw new NotFoundException(`Produto com ID "${id}" não encontrado`);
     }
@@ -44,17 +43,28 @@ export class ProductsService {
   async getProductsAndQuantitiesById(
     productsIdsAndQuanties: ProductOrder[],
   ): Promise<ProductFullOrder[]> {
-    // const normalizedProductsIdsAndQuanties =
-    //   this.normalizeProductsIdsAndQuantiesArray(productsIdsAndQuanties);
+    try {
+      const productsAndQuanties: ProductFullOrder[] = await Promise.all(
+        productsIdsAndQuanties.map(async (product) => ({
+          product: await this.getProductById(product.productId),
+          quantity: product.quantity,
+        })),
+      );
 
-    const productsAndQuanties: ProductFullOrder[] = await Promise.all(
-      productsIdsAndQuanties.map(async (product) => ({
-        product: await this.getProductById(product.productId),
-        quantity: product.quantity,
-      })),
-    );
+      return productsAndQuanties;
 
-    return productsAndQuanties;
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'ProductsService.getProductsAndQuantitiesById',
+        error,
+        productsIdsAndQuanties,
+      );
+
+      throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
+    }
   }
 
   async getProducInStockAndAvailabilitytById(
@@ -87,12 +97,12 @@ export class ProductsService {
         );
       }
     });
+
   }
 
   async updateProductsStockByOrderProductsAndQuantities(
     orderProductsAndQuantities: ProductFullOrder[],
   ): Promise<void> {
-
     try {
       orderProductsAndQuantities.forEach(async (product) => {
         product.product.stock = product.product.stock - product.quantity;
@@ -100,14 +110,17 @@ export class ProductsService {
       });
 
     } catch (error) {
-      // TODO - ERRO DB > E-MAIL
-      console.log(error);
-
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'ProductsService.updateProductsStockByOrderProductsAndQuantities',
+        error,
+        orderProductsAndQuantities,
+      );
     }
-
   }
 
-    // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
+  // Resolvido com @ArrayUnique((product) => product.productId) do Class Validator
   // normalizeProductsIdsAndQuantiesArray(
   //   productsIdsAndQuanties: ProductOrder[],
   // ): ProductOrder[] {

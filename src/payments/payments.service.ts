@@ -6,6 +6,7 @@ import { PaymentDTO } from './dtos/payment.dto';
 import { PaymentNotificationDTO } from './dtos/payment-notification.dto';
 import { Payment, PaymentDocument } from './models/payment.schema';
 import { OrdersService } from '../orders/orders.service';
+import { ErrorsService } from '../errors/errors.service';
 
 @Injectable()
 export class PaymentsService {
@@ -13,6 +14,7 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentsModel: Model<PaymentDocument>,
     private mercadoPagoService: MercadoPagoService,
     private ordersService: OrdersService,
+    private errorsService: ErrorsService,
   ) {}
 
   async handlePaymentNotificationWebHook(
@@ -39,8 +41,15 @@ export class PaymentsService {
       await this.ordersService.updateOrderWithPaymentData(newPayment);
 
     } catch (error) {
-      // TODO LOG
       console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'PaymentsService.createPayment',
+        error,
+        newPayment,
+      );
+
       throw new InternalServerErrorException();
     }
   }
@@ -62,8 +71,15 @@ export class PaymentsService {
       await this.ordersService.updateOrderWithPaymentData(foundPayment);
 
     } catch (error) {
-      // TODO LOG
       console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'PaymentsService.updatePayment',
+        error,
+        foundPayment,
+      );
+
       throw new InternalServerErrorException();
     }
 

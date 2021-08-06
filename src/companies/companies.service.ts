@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { AddressDocument } from '../addresses/models/address.schema';
+import { Model } from 'mongoose';
 import { Company, CompanyDocument } from './models/company.schema';
 
 @Injectable()
@@ -26,7 +25,7 @@ export class CompaniesService {
 
   async getAllCompanies(): Promise<CompanyDocument[]> {
     const found = await this.companiesModel.find(
-      {inactive: null }
+      { inactive: null }
     ).populate('address');
 
     if (!found) {
