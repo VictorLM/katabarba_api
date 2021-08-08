@@ -31,7 +31,7 @@ export class UsersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de usuário "${id}" inválido`);
     }
-    const found = await this.usersModel.findById(id).select('-roles').exec();
+    const found = await this.usersModel.findOne({ id, inactivated: null}).select('-roles').exec();
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
@@ -42,7 +42,7 @@ export class UsersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de usuário "${id}" inválido`);
     }
-    const found = await this.usersModel.findById(id).select('+password').exec();
+    const found = await this.usersModel.findOne({ id, inactivated: null }).select('+password').exec();
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
@@ -51,7 +51,7 @@ export class UsersService {
 
   // Método usado no AuthController e JWTStrategy
   async getUserByEmailWithPassword(email: string): Promise<UserDocument> {
-    return await this.usersModel.findOne({ email }).select('+password');
+    return await this.usersModel.findOne({ email, inactivated: null }).select('+password');
   }
 
   // Método usado no AuthController

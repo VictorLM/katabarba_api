@@ -57,7 +57,7 @@ export class AddressesService {
         complement,
         state,
         zipCode,
-        user,
+        user: user._id, // Para não retornar tudo do user
       });
 
       try {
@@ -65,7 +65,6 @@ export class AddressesService {
 
       } catch (error) {
         console.log(error);
-
         // Log error into DB - not await
         this.errorsService.createAppError(
           user._id,

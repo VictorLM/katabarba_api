@@ -1,14 +1,17 @@
 import { Catch, ArgumentsHost } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
+import { HttpExceptionsService } from './http-exceptions/http-exceptions.service';
+import { get } from 'lodash';
 
 @Catch()
 export class AllExceptionsFilter extends BaseExceptionFilter {
+  constructor(private readonly httpExceptionsService: HttpExceptionsService) {
+    super();
+  };
+
   catch(exception: unknown, host: ArgumentsHost) {
-
-    // console.trace('TESTEEEEEEEEEEEEEEEEE', exception);
-    // console.log('TEST', exception);
-    // EVENT LOG DB - SCHEDULE IF > 5 UNREAD > SEND E-MAIL
-
+    // not awaiting
+    this.httpExceptionsService.createAppHttpException(get(exception, 'response', null));
     super.catch(exception, host);
   }
 }

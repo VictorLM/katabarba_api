@@ -57,7 +57,7 @@ export class ErrorsService {
       // Log error into DB - not await
       this.createAppError(
         null,
-        'updateAppError',
+        'ErrorsService.updateAppError',
         error,
         foundAppError,
       );

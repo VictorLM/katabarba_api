@@ -80,7 +80,7 @@ export class ShipmentsService {
       // Log error into DB - not await
       this.errorsService.createAppError(
         null,
-        'PShipmentsService.createShipment',
+        'ShipmentsService.createShipment',
         error,
         newShipment,
       );

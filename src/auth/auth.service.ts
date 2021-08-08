@@ -7,7 +7,6 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UsersService } from '../users/users.service';
 import { ErrorsService } from '../errors/errors.service';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -24,35 +23,15 @@ export class AuthService {
   async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
     const { email, password } = signInDto;
     const user = await this.usersService.getUserByEmailWithPassword(email);
-
     // TODO - LOGIN EVENT TO DB
-
-    try {
-      if (user && (await this.passwordCompare(password, user.password))) {
-        const payload: JwtPayload = { email };
-        const accessToken: string = this.jwtService.sign(payload);
-        return { accessToken };
-      } else {
-        throw new UnauthorizedException('Email e/ou senha inválidos');
-      }
-
-    } catch(error) {
-      console.log(error);
-
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        user._id,
-        'AuthService.signIn',
-        error,
-        user,
-      );
-
-      throw new InternalServerErrorException(
-        'Erro ao processar o login. Por favor, tente novamente mais tarde',
-      );
-
+    // Tirei o try catch porque ao lançar o erro estava caindo no catch
+    if (user && (await this.passwordCompare(password, user.password))) {
+      const payload: JwtPayload = { email };
+      const accessToken: string = this.jwtService.sign(payload);
+      return { accessToken };
+    } else {
+      throw new UnauthorizedException('Email e/ou senha inválidos');
     }
-
   }
 
   async hashPassword(password: string): Promise<string> {

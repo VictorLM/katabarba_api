@@ -26,6 +26,13 @@ export class User {
 
   @Prop({ required: true, default: [Role.CUSTOMER] })
   roles: Role[];
+
+  @Prop({
+    type: Date,
+    required: false,
+    default: null,
+  })
+  inactivated: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
