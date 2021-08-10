@@ -31,7 +31,11 @@ export class UsersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de usuário "${id}" inválido`);
     }
-    const found = await this.usersModel.findOne({ id, inactivated: null}).select('-roles').exec();
+    const found = await this.usersModel.findOne({
+      _id: id,
+      inactivated: null,
+    }).select('-roles').exec();
+
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
@@ -42,7 +46,11 @@ export class UsersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID de usuário "${id}" inválido`);
     }
-    const found = await this.usersModel.findOne({ id, inactivated: null }).select('+password').exec();
+    const found = await this.usersModel.findOne({
+      _id: id,
+      inactivated: null
+    }).select('+password').exec();
+
     if (!found) {
       throw new NotFoundException(`Usuário com ID "${id}" não encontrado`);
     }
@@ -51,7 +59,10 @@ export class UsersService {
 
   // Método usado no AuthController e JWTStrategy
   async getUserByEmailWithPassword(email: string): Promise<UserDocument> {
-    return await this.usersModel.findOne({ email, inactivated: null }).select('+password');
+    return await this.usersModel.findOne({
+       email,
+       inactivated: null,
+    }).select('+password').exec();;
   }
 
   // Método usado no AuthController
@@ -95,6 +106,9 @@ export class UsersService {
     user: UserDocument,
   ): Promise<void> {
     const foundUser = await this.getUserById(user._id);
+    // Log changes into DB - not awaiting
+    this.changesService.createChange('users', 'User Update', { ...foundUser }, user._id);
+
     const { cpf, email, name, surname, phone } = userBaseDto;
 
     foundUser.cpf = cpf;
@@ -105,14 +119,6 @@ export class UsersService {
 
     try {
       await foundUser.save();
-      // // Log changes - TODO
-      // await this.changesService.createChange({
-      //   user: user._id,
-      //   collectionName: 'users',
-      //   type: 'User Update',
-      //   before: user
-      // });
-      // //
 
     } catch (error) {
       if (error.code === 11000) {
@@ -142,22 +148,17 @@ export class UsersService {
     // REDIRECT LOGIN FRONT?
     const foundUser = await this.getUserByIdWithPassword(user._id);
     const { currentPassword, newPassword } = changeUserPasswordDto;
-    // user.password = foundUser.password; // changes - TODO
 
     if (await this.authService.passwordCompare(currentPassword, foundUser.password)) {
+
+      // Log changes into DB - not awaiting
+      this.changesService.createChange('users', 'User Password Update', { ...foundUser }, user._id);
 
       foundUser.password = await this.authService.hashPassword(newPassword);
 
       try {
         await foundUser.save();
-        // Log changes - TODO
-        // await this.changesService.createChange({
-        //   user: user._id,
-        //   collectionName: 'users',
-        //   type: 'User Password Update',
-        //   before: user
-        // });
-        //
+
       } catch (error) {
         console.log(error);
         // Log error into DB - not await

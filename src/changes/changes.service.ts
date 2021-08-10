@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ErrorsService } from '../errors/errors.service';
-import { ChangeDto } from './dtos/change.dto';
 import { Change, ChangeDocument } from './models/change.schema';
 
 @Injectable()
@@ -12,9 +11,20 @@ export class ChangesService {
     private errorsService: ErrorsService,
   ) {}
 
-  // TODO - REFACTOR TO WORK WITHOUT AWAIT
-  async createChange(changeDto: ChangeDto): Promise<void> {
-    const newChange = new this.changesModel(changeDto);
+  async createChange(
+    collectionName: string,
+    type: string,
+    before: any, // Tem que ser uma deep copy de um Mongoose Document com spread operator { ...document }
+    user: Types.ObjectId,
+  ): Promise<void> {
+    const beforeDoc = { ...before._doc }; // Sendo uma deep copy de um mongoose document da pra acessar essa prop ._doc
+    const newChange = new this.changesModel({
+      collectionName,
+      type,
+      before: beforeDoc,
+      user,
+    });
+
     try {
       await newChange.save();
 

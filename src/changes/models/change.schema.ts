@@ -12,8 +12,11 @@ export class Change {
   @Prop({ required: true })
   type: string;
 
-  @Prop({ required: true })
-  before: mongoose.Types.DocumentArray<any>;
+  @Prop({
+    type: {},
+    required: true,
+  })
+  before: any;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
