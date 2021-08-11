@@ -9,9 +9,11 @@ import { AddressesModule } from '../addresses/addresses.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
 import { MercadoPagoModule } from '../mercado-pago/mercado-pago.module';
 import { ErrorsModule } from '../errors/errors.module';
+import { EmailsModule } from '../emails/emails.module';
 
 @Module({
   imports: [
+    EmailsModule,
     ErrorsModule,
     MercadoPagoModule,
     forwardRef(() => ShipmentsModule),

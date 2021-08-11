@@ -22,6 +22,7 @@ import { PaymentDocument } from '../payments/models/payment.schema';
 import { PaymentStatuses } from '../payments/enums/payment-statuses.enum';
 import { ErrorsService } from '../errors/errors.service';
 import { ShipmentDocument } from '../shipments/models/shipment.schema';
+import { EmailsService } from '../emails/emails.service';
 
 @Injectable()
 export class OrdersService {
@@ -33,6 +34,7 @@ export class OrdersService {
     private shipmentsService: ShipmentsService,
     private mercadoPagoService: MercadoPagoService,
     private errorsService: ErrorsService,
+    private emailsService: EmailsService,
   ) {}
 
   async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {
@@ -60,6 +62,8 @@ export class OrdersService {
       await this.productsService.getProductsAndQuantitiesById(
         productsIdsAndQuanties,
       );
+
+    // CHECK PRODUCTS STOCKKKKKKKKKKKKKKKK TODO
 
     const newShipment = await this.shipmentsService.createShipment({
       deliveryAddress,
@@ -95,6 +99,9 @@ export class OrdersService {
     this.productsService.updateProductsStockByOrderProductsAndQuantities(
       productsAndQuantities,
     );
+
+    // Send email - not await
+    this.emailsService.sendNewOrderEmail(newOrder);
 
     return { mpPreferenceId };
   }
