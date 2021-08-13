@@ -1,19 +1,12 @@
-import { IsDate, IsEnum, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsDate, IsNotEmpty } from 'class-validator';
 import { Types } from 'mongoose';
-import { User } from '../../users/models/user.schema';
-import { MailTypes } from '../enums/mail-types.enum';
+import { EmailTypes } from '../enums/email-types.enum';
+import { EmailRecipient } from '../interfaces/email-recipient.interface.';
 
 export class CreateEmailDTO {
-  @IsNotEmpty()
-  readonly recipient: User;
-
-  @IsNotEmpty()
-  @IsEnum(MailTypes)
-  readonly type: MailTypes;
-
-  @IsOptional()
-  @IsMongoId()
-  readonly relatedTo: Types.ObjectId;
+  readonly recipient: EmailRecipient;
+  readonly type: EmailTypes;
+  readonly relatedTo?: Types.ObjectId;
 }
 
 // TODO - CLASS VALIDATOR DATE || NULL

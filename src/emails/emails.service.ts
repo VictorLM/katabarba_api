@@ -2,22 +2,28 @@ import { Injectable } from '@nestjs/common';
 import * as mailjet from 'node-mailjet';
 import { ConfigService } from '@nestjs/config';
 import { ErrorsService } from '../errors/errors.service';
-import { MailTypes } from './enums/mail-types.enum';
-import { Model } from 'mongoose';
-import { MailSubjects } from './enums/mail-subjects.enum';
+import { EmailTypes } from './enums/email-types.enum';
+import { Model, Types } from 'mongoose';
+import { EmailSubjects } from './enums/email-subjects.enum';
 import { Email, EmailDocument } from './models/email.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateEmailDTO } from './dtos/email.dto';
 import { getCreateOrderHTML } from './templates/emails.template';
 import { OrderDocument } from '../orders/models/order.schema';
 import { get } from 'lodash';
-import { MailStatuses } from './enums/mail-statuses.enum';
+import { EmailStatuses } from './enums/email-statuses.enum';
+import { EmailRecipient } from './interfaces/email-recipient.interface.';
+import { EmailEvent, EmailEventDocument } from './models/email-event.schema';
+import { CreateEmailEventDTO } from './dtos/email-event.dto';
+import { EmailEventNotificationDTO } from './dtos/email-event-notification.dto';
+import { fromUnixTime } from 'date-fns';
 
 @Injectable()
 export class EmailsService {
   private mailJetClient: mailjet.Email.Client;
   constructor(
     @InjectModel(Email.name) private emailsModel: Model<EmailDocument>,
+    @InjectModel(EmailEvent.name) private emailEventsModel: Model<EmailEventDocument>,
     private configService: ConfigService,
     private errorsService: ErrorsService,
   ) {
@@ -28,10 +34,14 @@ export class EmailsService {
   }
 
   async sendNewOrderEmail(order: OrderDocument): Promise<void> {
-
+    const recipient: EmailRecipient = {
+      email: order.user.email,
+      name: order.user.name,
+      user: get(order, 'user._id', null), // GAMB
+    };
     const createEmailDTO: CreateEmailDTO = {
-      recipient: order.user,
-      type: MailTypes.ORDER_CREATE,
+      recipient,
+      type: EmailTypes.ORDER_CREATE,
       relatedTo: order._id,
     };
 
@@ -39,9 +49,21 @@ export class EmailsService {
     const sendParamsMessage = this.setupSendEmailParams(newEmail);
     const orderEmailHTML = this.getOrderEmailHTML(newEmail, order);
     sendParamsMessage.Messages[0].HTMLPart = orderEmailHTML;
-    await this.sendEmail(sendParamsMessage);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
 
-    // TOTO - ATUALIZAR STATUS QUANDO RECEBER O WEBHOOK
+    try {
+      await newEmail.save();
+
+    } catch(error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendNewOrderEmail',
+        error,
+        newEmail,
+      );
+    }
   }
 
   async createEmail(createEmailDTO: CreateEmailDTO): Promise<EmailDocument> {
@@ -72,10 +94,10 @@ export class EmailsService {
           To: [
             {
               Email: email.recipient.email,
-              Name: email.recipient.name,
+              Name: get(email, 'recipient.name', ''),
             },
           ],
-          Subject: MailSubjects[email.type],
+          Subject: EmailSubjects[email.type],
           // TODO - TEXT PART?
           TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
           // HTMLPart: html,
@@ -92,18 +114,20 @@ export class EmailsService {
     order: OrderDocument,
   ): string {
     // TODO
-    if(email.type === MailTypes.ORDER_CREATE) {
+    if(email.type === EmailTypes.ORDER_CREATE) {
       // console.log(getCreateOrderHTML(order));
       return getCreateOrderHTML(order);
     }
-    // todo
-    // return `<h3>Dear passenger 1, welcome to <a href='https://www.mailjet.com/'>Mailjet</a>!</h3><br />May the delivery force be with you!`;
+
+    // TODO OTHER ORDER TEMPLATES
   }
 
-  async sendEmail(sendParams: mailjet.Email.SendParams): Promise<void> {
-
+  async sendEmail(sendParams: mailjet.Email.SendParams): Promise<EmailStatuses> {
     try {
-      await this.mailJetClient.post('send', { version: 'v3.1' }).request(sendParams);
+      const response = await this.mailJetClient.post('send', { version: 'v3.1' }).request(sendParams);
+      // Considerando que está sendo enviada apenas uma mensagem
+      const result = get(response, 'body.Messages[0].Status', EmailStatuses.error);
+      return result;
 
     } catch(error) {
       console.log(error);
@@ -114,7 +138,63 @@ export class EmailsService {
         error,
         sendParams,
       );
+      return EmailStatuses.error;
     }
+  }
+
+  async createEmailEvents(
+    createEmailEventsDTO: CreateEmailEventDTO[],
+  ): Promise<void> {
+    try {
+      await this.emailEventsModel.insertMany(createEmailEventsDTO);
+
+    } catch(error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.createEmailEvents',
+        error,
+        createEmailEventsDTO,
+      );
+    }
+  }
+
+  async emailEventsNotificationWebHook(
+    emailEventsNotificationDTO: EmailEventNotificationDTO[],
+  ): Promise<void> {
+    // emailEventsNotificationDTO.forEach((emailEvent) => console.log(emailEvent));
+    const createEmailEventsDTO: CreateEmailEventDTO[] = [];
+
+    emailEventsNotificationDTO.forEach((emailEvent) => {
+      createEmailEventsDTO.push({
+        emailID: Types.ObjectId(emailEvent.CustomID),
+        event: emailEvent.event,
+        time: fromUnixTime(emailEvent.time),
+        email: emailEvent.email,
+        mjCampaignId: emailEvent.mj_campaign_id,
+        mjContactID: emailEvent.mj_contact_id,
+        customCampaign: emailEvent.customcampaign ? emailEvent.customcampaign : undefined,
+        messageID: emailEvent.MessageID,
+        messageGUID: emailEvent.Message_GUID,
+        payload: emailEvent.Payload,
+        mjMessageID: emailEvent.mj_message_id,
+        smtpReply: emailEvent.smtp_reply,
+        ip: emailEvent.ip,
+        geo: emailEvent.geo,
+        agent: emailEvent.agent,
+        url: emailEvent.url,
+        blocked: emailEvent.blocked,
+        hardBounce: emailEvent.hard_bounce,
+        errorRelatedTo: emailEvent.error_related_to,
+        error: emailEvent.error,
+        comment: emailEvent.comment,
+        source: emailEvent.source,
+        mjListID: emailEvent.mj_list_id,
+      });
+    });
+
+    await this.createEmailEvents(createEmailEventsDTO);
   }
 
 }

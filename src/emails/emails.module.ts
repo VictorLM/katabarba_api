@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ErrorsModule } from '../errors/errors.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Email, EmailSchema } from './models/email.schema';
+import { EmailEvent, EmailEventSchema } from './models/email-event.schema';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { Email, EmailSchema } from './models/email.schema';
     ErrorsModule,
     MongooseModule.forFeature([
       { name: Email.name, schema: EmailSchema },
+      { name: EmailEvent.name, schema: EmailEventSchema },
     ]),
   ],
   providers: [EmailsService],

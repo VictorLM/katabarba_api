@@ -1,4 +1,4 @@
-export enum MailStatuses {
+export enum EmailStatuses {
   success = 'success',
   error = 'error',
 }

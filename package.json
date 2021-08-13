@@ -37,6 +37,7 @@
     "bcrypt": "^5.0.1",
     "class-transformer": "^0.4.0",
     "class-validator": "^0.13.1",
+    "date-fns": "^2.23.0",
     "fast-xml-parser": "^3.19.0",
     "lodash": "^4.17.21",
     "mercadopago": "^1.5.8",

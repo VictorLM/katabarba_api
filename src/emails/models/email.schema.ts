@@ -1,19 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
-import { User } from '../../users/models/user.schema';
-import { MailTypes } from '../enums/mail-types.enum';
-import { MailStatuses } from '../enums/mail-statuses.enum';
+import { EmailTypes } from '../enums/email-types.enum';
+import { EmailStatuses } from '../enums/email-statuses.enum';
+import { EmailRecipient } from '../interfaces/email-recipient.interface.';
 
 export type EmailDocument = Email & mongoose.Document;
 
 @Schema({ collection: 'emails', timestamps: true })
 export class Email {
   @Prop({
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: EmailRecipient,
     required: true,
   })
-  recipient: User;
+  recipient: EmailRecipient;
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
@@ -24,24 +23,17 @@ export class Email {
 
   @Prop({
     required: true,
-    enum: MailTypes
+    enum: EmailTypes
   })
-  type: MailTypes;
+  type: EmailTypes;
 
   @Prop({
     required: false,
     nullable: true,
     default: null,
-    enum: Object.values(MailStatuses).concat([null]), // Para aceitar null
+    enum: Object.values(EmailStatuses).concat([null]), // Para aceitar null
   })
-  status: MailStatuses;
-
-  @Prop({
-    type: {},
-    required: false,
-    default: null,
-  })
-  details: any;
+  status: EmailStatuses;
 
   @Prop({
     type: Date,

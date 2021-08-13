@@ -63,7 +63,7 @@ export class OrdersService {
         productsIdsAndQuanties,
       );
 
-    // CHECK PRODUCTS STOCKKKKKKKKKKKKKKKK TODO
+    this.productsService.checkProductsStockAndAvailability(productsAndQuantities);
 
     const newShipment = await this.shipmentsService.createShipment({
       deliveryAddress,
@@ -85,7 +85,7 @@ export class OrdersService {
     );
 
     // New Mercado Pago Preference with Order ID as External Reference
-    // If fails, deletes the new order and shipment
+    // If fails, deletes the new order and shipment documents
     const mpPreferenceId =
       await this.mercadoPagoService.createPreferenceWithOrderId(
         newOrder,

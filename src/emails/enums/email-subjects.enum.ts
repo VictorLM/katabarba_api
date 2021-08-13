@@ -1,4 +1,4 @@
-export enum MailSubjects {
+export enum EmailSubjects {
   // ORDERS
   ORDER_CREATE = 'Recebemos seu pedido',
   ORDER_UPDATE = 'Seu pedido foi atualizado',

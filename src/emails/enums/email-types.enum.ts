@@ -1,4 +1,4 @@
-export enum MailTypes {
+export enum EmailTypes {
   // ORDERS
   ORDER_CREATE = 'ORDER_CREATE',
   ORDER_UPDATE = 'ORDER_UPDATE',
