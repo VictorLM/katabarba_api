@@ -1,6 +1,5 @@
 // import { Type } from 'class-transformer';
-import { Type } from 'class-transformer';
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { EmailEvents } from '../enums/email-events.enum';
 
 export class EmailEventNotificationDTO {
@@ -33,7 +32,7 @@ export class EmailEventNotificationDTO {
   readonly MessageID: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsString()
   readonly Message_GUID: string;
 
   @IsNotEmpty()
@@ -97,8 +96,10 @@ export class EmailEventNotificationDTO {
   readonly mj_list_id: number;
 }
 
-export class EmailEventsNotificationDTO extends Array { // Estava dando problema no forEach
-  @ValidateNested({ each: true })
-  @Type(() => EmailEventNotificationDTO)
-  list: EmailEventNotificationDTO[];
-}
+// export class EmailEventsNotificationDTO { // Estava dando problema no forEach
+//   @IsNotEmpty()
+//   @IsArray()
+//   @ValidateNested({ each: true })
+//   @Type(() => EmailEventNotificationDTO)
+//   readonly items: EmailEventNotificationDTO[];
+// }

@@ -1,5 +1,5 @@
-import { Body, Controller, HttpCode, Post, } from '@nestjs/common';
-import { EmailEventNotificationDTO, EmailEventsNotificationDTO } from './dtos/email-event-notification.dto';
+import { Body, Controller, HttpCode, ParseArrayPipe, Post, } from '@nestjs/common';
+import { EmailEventNotificationDTO } from './dtos/email-event-notification.dto';
 import { EmailsService } from './emails.service';
 
 @Controller('emails')
@@ -10,19 +10,13 @@ export class EmailsController {
   // WEBHOOK - TODO
 
   @Post('/notifications')
+  @HttpCode(200) // Required MailJet webhook response
   emailEventsNotificationWebHook(
-    @Body() emailEventsNotificationDTO: EmailEventsNotificationDTO,
-  ) {
-    console.log('PASSOU!', emailEventsNotificationDTO);
+    @Body(new ParseArrayPipe({ items: EmailEventNotificationDTO }))
+    emailEventsNotificationDTO: EmailEventNotificationDTO[],
+  ): Promise<void> {
+    return this.emailsService.emailEventsNotificationWebHook(emailEventsNotificationDTO);
   }
-
-  // @Post('/notifications')
-  // @HttpCode(200) // Required MeiJet webhook response
-  // emailEventsNotificationWebHook(
-  //   @Body() emailEventsNotificationDTO: EmailEventNotificationDTO[],
-  // ): Promise<void> {
-  //   return this.emailsService.emailEventsNotificationWebHook(emailEventsNotificationDTO);
-  // }
 
   // @Post('/test')
   // test(@Body() test: TestDTO[]) {

@@ -83,7 +83,6 @@ export class EmailsService {
   }
 
   setupSendEmailParams(email: EmailDocument): mailjet.Email.SendParams {
-    // const html = this.getEmailHTMLbyType(email.type, document);
     const sendParamsMessage: mailjet.Email.SendParams = {
       Messages: [
         {
@@ -98,8 +97,7 @@ export class EmailsService {
             },
           ],
           Subject: EmailSubjects[email.type],
-          // TODO - TEXT PART?
-          TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
+          // TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
           // HTMLPart: html,
           CustomID: email._id,
         },
@@ -115,7 +113,6 @@ export class EmailsService {
   ): string {
     // TODO
     if(email.type === EmailTypes.ORDER_CREATE) {
-      // console.log(getCreateOrderHTML(order));
       return getCreateOrderHTML(order);
     }
 
@@ -172,12 +169,12 @@ export class EmailsService {
         event: emailEvent.event,
         time: fromUnixTime(emailEvent.time),
         email: emailEvent.email,
-        mjCampaignId: emailEvent.mj_campaign_id,
+        mjCampaignId: emailEvent.mj_campaign_id ? emailEvent.mj_campaign_id : undefined,
         mjContactID: emailEvent.mj_contact_id,
         customCampaign: emailEvent.customcampaign ? emailEvent.customcampaign : undefined,
         messageID: emailEvent.MessageID,
         messageGUID: emailEvent.Message_GUID,
-        payload: emailEvent.Payload,
+        payload: emailEvent.Payload ? emailEvent.Payload : undefined,
         mjMessageID: emailEvent.mj_message_id,
         smtpReply: emailEvent.smtp_reply,
         ip: emailEvent.ip,

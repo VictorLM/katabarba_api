@@ -13,7 +13,7 @@ export function getCreateOrderHTML(order: OrderDocument): string {
 
   order.productsAndQuantities.forEach(productAndQuantitie => {
     html = html + `
-    <p><b>${productAndQuantitie.quantity} X - ${productAndQuantitie.product.name}</b></p>
+    <p><b>${productAndQuantitie.quantity} x - ${productAndQuantitie.product.name}</b></p>
     <p>R$ ${productAndQuantitie.product.price * productAndQuantitie.quantity}</p>
     <hr/>
     `;
