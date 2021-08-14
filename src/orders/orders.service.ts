@@ -23,6 +23,7 @@ import { PaymentStatuses } from '../payments/enums/payment-statuses.enum';
 import { ErrorsService } from '../errors/errors.service';
 import { ShipmentDocument } from '../shipments/models/shipment.schema';
 import { EmailsService } from '../emails/emails.service';
+import { EmailTypes } from '../emails/enums/email-types.enum';
 
 @Injectable()
 export class OrdersService {
@@ -42,6 +43,17 @@ export class OrdersService {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
     const foundOrder = await this.ordersModel.findById(id);
+    if (!foundOrder) {
+      throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
+    }
+    return foundOrder;
+  }
+
+  async getOrderByIdAndPopulateUser(id: Types.ObjectId): Promise<OrderDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID do Pedido "${id}" inválido`);
+    }
+    const foundOrder = await this.ordersModel.findById(id).populate('user');
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
@@ -101,7 +113,7 @@ export class OrdersService {
     );
 
     // Send email - not await
-    this.emailsService.sendNewOrderEmail(newOrder);
+    this.emailsService.sendOrderEmail(newOrder, EmailTypes.ORDER_CREATE);
 
     return { mpPreferenceId };
   }
@@ -217,7 +229,7 @@ export class OrdersService {
 
   async updateOrderWithPaymentData(payment: PaymentDocument): Promise<void> {
     // GAMB VIOLENTA - Não sei porque o type do campo Order está pegando o Objeto não o ObjectId
-    const foundOrder = await this.getOrderById(
+    const foundOrder = await this.getOrderByIdAndPopulateUser(
       Types.ObjectId(String(payment.order)),
     );
     // Pode ser que o primeiro pagamento seja rejeitado e um segundo aprovado
@@ -226,6 +238,8 @@ export class OrdersService {
 
     if (payment.status === PaymentStatuses.approved) {
       foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;
+      // Send email - not await
+      this.emailsService.sendOrderEmail(foundOrder, EmailTypes.ORDER_PAYED);
     }
 
     try {

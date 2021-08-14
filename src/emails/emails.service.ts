@@ -8,7 +8,7 @@ import { EmailSubjects } from './enums/email-subjects.enum';
 import { Email, EmailDocument } from './models/email.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateEmailDTO } from './dtos/email.dto';
-import { getCreateOrderHTML } from './templates/emails.template';
+import { getCreateOrderHTML, getPayedOrderHTML } from './templates/emails.template';
 import { OrderDocument } from '../orders/models/order.schema';
 import { get } from 'lodash';
 import { EmailStatuses } from './enums/email-statuses.enum';
@@ -33,7 +33,10 @@ export class EmailsService {
     );
   }
 
-  async sendNewOrderEmail(order: OrderDocument): Promise<void> {
+  async sendOrderEmail(
+    order: OrderDocument,
+    type: EmailTypes,
+  ): Promise<void> {
     const recipient: EmailRecipient = {
       email: order.user.email,
       name: order.user.name,
@@ -41,7 +44,7 @@ export class EmailsService {
     };
     const createEmailDTO: CreateEmailDTO = {
       recipient,
-      type: EmailTypes.ORDER_CREATE,
+      type,
       relatedTo: order._id,
     };
 
@@ -111,12 +114,12 @@ export class EmailsService {
     email: EmailDocument,
     order: OrderDocument,
   ): string {
-    // TODO
+    // TODO OTHER ORDER TEMPLATES
     if(email.type === EmailTypes.ORDER_CREATE) {
       return getCreateOrderHTML(order);
+    } else if(email.type === EmailTypes.ORDER_PAYED) {
+      return getPayedOrderHTML(order);
     }
-
-    // TODO OTHER ORDER TEMPLATES
   }
 
   async sendEmail(sendParams: mailjet.Email.SendParams): Promise<EmailStatuses> {
