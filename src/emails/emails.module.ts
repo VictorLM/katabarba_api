@@ -6,14 +6,18 @@ import { ErrorsModule } from '../errors/errors.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Email, EmailSchema } from './models/email.schema';
 import { EmailEvent, EmailEventSchema } from './models/email-event.schema';
+import { ProductAvailableNotification, ProductAvailableNotificationSchema } from './models/product-available-notification.schema';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
+    ProductsModule,
     ConfigModule,
     ErrorsModule,
     MongooseModule.forFeature([
       { name: Email.name, schema: EmailSchema },
       { name: EmailEvent.name, schema: EmailEventSchema },
+      { name: ProductAvailableNotification.name, schema: ProductAvailableNotificationSchema },
     ]),
   ],
   providers: [EmailsService],

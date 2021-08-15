@@ -3,8 +3,7 @@ export enum EmailSubjects {
   ORDER_CREATE = 'Recebemos seu pedido',
   ORDER_PAYED = 'Recebemos o pagamento do seu pedido',
   ORDER_SHIPPED = 'Seu pedido foi enviado',
-  // PAYMENTS
-  PAYMENT_REMINDER = 'Lembrete de pagamento referente ao seu pedido',
+  ORDER_PAYMENT_REMINDER = 'Lembrete de pagamento do seu pedido',
   // PRODUCTS
   PRODUCT_AVAILABLE = 'O produto que você queria está disponível',
   // ERRORS

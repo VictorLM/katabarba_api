@@ -40,7 +40,7 @@ export class Email {
     required: false,
     default: null,
   })
-  notResend: Date;
+  resend: Date;
 }
 
 export const EmailSchema = SchemaFactory.createForClass(Email);

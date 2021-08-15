@@ -8,7 +8,12 @@ import { EmailSubjects } from './enums/email-subjects.enum';
 import { Email, EmailDocument } from './models/email.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateEmailDTO } from './dtos/email.dto';
-import { getCreateOrderHTML, getPayedOrderHTML } from './templates/emails.template';
+import {
+  getCreateOrderHTML,
+  getOrderPaymentReminderHTML,
+  getPayedOrderHTML,
+  getShippedOrderHTML,
+} from './templates/emails.template';
 import { OrderDocument } from '../orders/models/order.schema';
 import { get } from 'lodash';
 import { EmailStatuses } from './enums/email-statuses.enum';
@@ -17,15 +22,26 @@ import { EmailEvent, EmailEventDocument } from './models/email-event.schema';
 import { CreateEmailEventDTO } from './dtos/email-event.dto';
 import { EmailEventNotificationDTO } from './dtos/email-event-notification.dto';
 import { fromUnixTime } from 'date-fns';
+import {
+  ProductAvailableNotification,
+  ProductAvailableNotificationDocument,
+} from './models/product-available-notification.schema';
+import { CreateProductAvailableNotificationDTO } from './dtos/product-available-notification.dto';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class EmailsService {
   private mailJetClient: mailjet.Email.Client;
   constructor(
-    @InjectModel(Email.name) private emailsModel: Model<EmailDocument>,
-    @InjectModel(EmailEvent.name) private emailEventsModel: Model<EmailEventDocument>,
+    @InjectModel(Email.name)
+    private emailsModel: Model<EmailDocument>,
+    @InjectModel(EmailEvent.name)
+    private emailEventsModel: Model<EmailEventDocument>,
+    @InjectModel(ProductAvailableNotification.name)
+    private productAvailableNotificationsModel: Model<ProductAvailableNotificationDocument>,
     private configService: ConfigService,
     private errorsService: ErrorsService,
+    private productsService: ProductsService,
   ) {
     this.mailJetClient = mailjet.connect(
       this.configService.get('MJ_APIKEY_PUBLIC'),
@@ -33,10 +49,7 @@ export class EmailsService {
     );
   }
 
-  async sendOrderEmail(
-    order: OrderDocument,
-    type: EmailTypes,
-  ): Promise<void> {
+  async sendOrderEmail(order: OrderDocument, type: EmailTypes): Promise<void> {
     const recipient: EmailRecipient = {
       email: order.user.email,
       name: order.user.name,
@@ -56,8 +69,7 @@ export class EmailsService {
 
     try {
       await newEmail.save();
-
-    } catch(error) {
+    } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
@@ -69,11 +81,40 @@ export class EmailsService {
     }
   }
 
+  async createProductAvailableNotification(
+    createProductAvailableNotificationDTO: CreateProductAvailableNotificationDTO,
+  ): Promise<void> {
+    const { email, product } = createProductAvailableNotificationDTO;
+
+    const foundProduct = await this.productsService.getProductById(product);
+
+    const newProductAvailableNotification =
+      new this.productAvailableNotificationsModel({
+        recipient: email,
+        product: foundProduct,
+      });
+
+    try {
+      await newProductAvailableNotification.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.createProductAvailableNotification',
+        error,
+        newProductAvailableNotification,
+      );
+    }
+  }
+
   async createEmail(createEmailDTO: CreateEmailDTO): Promise<EmailDocument> {
     const newEmail = new this.emailsModel(createEmailDTO);
     try {
       return await newEmail.save();
-    } catch(error) {
+
+    } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
@@ -105,31 +146,43 @@ export class EmailsService {
           CustomID: email._id,
         },
       ],
-    }
+    };
 
     return sendParamsMessage;
   }
 
-  getOrderEmailHTML(
-    email: EmailDocument,
-    order: OrderDocument,
-  ): string {
+  getOrderEmailHTML(email: EmailDocument, order: OrderDocument): string {
     // TODO OTHER ORDER TEMPLATES
-    if(email.type === EmailTypes.ORDER_CREATE) {
+    if (email.type === EmailTypes.ORDER_CREATE) {
       return getCreateOrderHTML(order);
-    } else if(email.type === EmailTypes.ORDER_PAYED) {
+    } else if (email.type === EmailTypes.ORDER_PAYED) {
       return getPayedOrderHTML(order);
+    } else if (email.type === EmailTypes.ORDER_SHIPPED) {
+      // TODO - A Order tem que vir com o Shipment populated
+      return getShippedOrderHTML(order);
+    } else if (email.type === EmailTypes.ORDER_PAYMENT_REMINDER) {
+      return getOrderPaymentReminderHTML(
+        order,
+        this.configService.get('APP_URL'),
+      );
     }
   }
 
-  async sendEmail(sendParams: mailjet.Email.SendParams): Promise<EmailStatuses> {
+  async sendEmail(
+    sendParams: mailjet.Email.SendParams,
+  ): Promise<EmailStatuses> {
     try {
-      const response = await this.mailJetClient.post('send', { version: 'v3.1' }).request(sendParams);
+      const response = await this.mailJetClient
+        .post('send', { version: 'v3.1' })
+        .request(sendParams);
       // Considerando que está sendo enviada apenas uma mensagem
-      const result = get(response, 'body.Messages[0].Status', EmailStatuses.error);
+      const result = get(
+        response,
+        'body.Messages[0].Status',
+        EmailStatuses.error,
+      );
       return result;
-
-    } catch(error) {
+    } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
@@ -147,8 +200,7 @@ export class EmailsService {
   ): Promise<void> {
     try {
       await this.emailEventsModel.insertMany(createEmailEventsDTO);
-
-    } catch(error) {
+    } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
@@ -172,9 +224,13 @@ export class EmailsService {
         event: emailEvent.event,
         time: fromUnixTime(emailEvent.time),
         email: emailEvent.email,
-        mjCampaignId: emailEvent.mj_campaign_id ? emailEvent.mj_campaign_id : undefined,
+        mjCampaignId: emailEvent.mj_campaign_id
+          ? emailEvent.mj_campaign_id
+          : undefined,
         mjContactID: emailEvent.mj_contact_id,
-        customCampaign: emailEvent.customcampaign ? emailEvent.customcampaign : undefined,
+        customCampaign: emailEvent.customcampaign
+          ? emailEvent.customcampaign
+          : undefined,
         messageID: emailEvent.MessageID,
         messageGUID: emailEvent.Message_GUID,
         payload: emailEvent.Payload ? emailEvent.Payload : undefined,
