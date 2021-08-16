@@ -4,7 +4,7 @@ import { EmailTypes } from '../enums/email-types.enum';
 import { EmailRecipient } from '../interfaces/email-recipient.interface.';
 
 export class CreateEmailDTO {
-  readonly recipient: EmailRecipient;
+  readonly recipients: EmailRecipient[];
   readonly type: EmailTypes;
   readonly relatedTo?: Types.ObjectId;
 }

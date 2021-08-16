@@ -8,11 +8,8 @@ export type EmailDocument = Email & mongoose.Document;
 
 @Schema({ collection: 'emails', timestamps: true })
 export class Email {
-  @Prop({
-    type: EmailRecipient,
-    required: true,
-  })
-  recipient: EmailRecipient;
+  @Prop({ required: true })
+  recipients: EmailRecipient[];
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,

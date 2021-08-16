@@ -17,6 +17,7 @@ import { ErrorsModule } from '../errors/errors.module';
     ]),
   ],
   providers: [PaymentsService],
+  exports: [PaymentsService],
   controllers: [PaymentsController]
 })
 export class PaymentsModule {}

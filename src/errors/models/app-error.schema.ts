@@ -15,10 +15,10 @@ export class AppError {
   user: User;
 
   @Prop({
-    type: Error,
+    type: {},
     required: true,
   })
-  error: Error;
+  error: any;
 
   @Prop({ required: true })
   action: string;

@@ -21,12 +21,15 @@ export class ErrorsService {
     return found;
   }
 
-  // TODO - Notification e-mail
+  async getNotCheckedAppErrors(): Promise<AppErrorDocument[]> {
+    return await this.errorsModel.find({ checked: null });
+  }
+
   async createAppError(
     userId: Types.ObjectId | null,
     action: string,
-    error: Error,
-    model: any, // TODO?
+    error: unknown,
+    model: any,
   ): Promise<void> {
     const newAppError = new this.errorsModel({
       user: userId,

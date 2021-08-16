@@ -1,6 +1,8 @@
+import { AppErrorDocument } from "../../errors/models/app-error.schema";
 import { OrderDocument } from "../../orders/models/order.schema";
 
 // TODO - DEFINIR COM JOW
+// ORDERS
 export function getCreateOrderHTML(order: OrderDocument): string {
   let html =`
   <!DOCTYPE html>
@@ -96,5 +98,39 @@ function getOrderItemsHTML(order: OrderDocument): string {
     `;
   });
 
+  return html;
+}
+
+// ERRORS
+export function getErrorsEmailHTML(errors: AppErrorDocument[]): string {
+  let html =`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <body>
+    <h2>Alerta! Errors não tratados na aplicação:</h2>
+    <br/>`;
+
+    errors.forEach((error) => {
+      html = html + `
+      <h3>${error.action}</h3>
+      ${objectToKeyValue(error.error)}
+      <hr/>
+      `;
+    });
+
+  html = html + `</body></html>`;
+
+  return html;
+}
+
+function objectToKeyValue(object: any): string {
+  let html = '';
+  if(typeof object === 'object') {
+    Object.keys(object).forEach((obj) => {
+      html = html + `
+        <p><b>${obj}:</b> <code>${object[obj]}</code></p>
+      `;
+    });
+  }
   return html;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as mailjet from 'node-mailjet';
 import { ConfigService } from '@nestjs/config';
 import { ErrorsService } from '../errors/errors.service';
@@ -10,6 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { CreateEmailDTO } from './dtos/email.dto';
 import {
   getCreateOrderHTML,
+  getErrorsEmailHTML,
   getOrderPaymentReminderHTML,
   getPayedOrderHTML,
   getShippedOrderHTML,
@@ -28,6 +29,8 @@ import {
 } from './models/product-available-notification.schema';
 import { CreateProductAvailableNotificationDTO } from './dtos/product-available-notification.dto';
 import { ProductsService } from '../products/products.service';
+import { AppErrorDocument } from '../errors/models/app-error.schema';
+import { UserDocument } from '../users/models/user.schema';
 
 @Injectable()
 export class EmailsService {
@@ -43,20 +46,36 @@ export class EmailsService {
     private errorsService: ErrorsService,
     private productsService: ProductsService,
   ) {
-    this.mailJetClient = mailjet.connect(
-      this.configService.get('MJ_APIKEY_PUBLIC'),
-      this.configService.get('MJ_APIKEY_PRIVATE'),
-    );
+    try {
+      this.mailJetClient = mailjet.connect(
+        this.configService.get('MJ_APIKEY_PUBLIC'),
+        this.configService.get('MJ_APIKEY_PRIVATE'),
+      );
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.constructor',
+        error,
+        null,
+      );
+      throw new InternalServerErrorException('Erro ao inicializar EmailsService.');
+    }
   }
 
-  async sendOrderEmail(order: OrderDocument, type: EmailTypes): Promise<void> {
-    const recipient: EmailRecipient = {
+  async sendOrderEmail(
+    order: OrderDocument,
+    type: EmailTypes,
+  ): Promise<void> {
+    const recipients: EmailRecipient[] = [{
       email: order.user.email,
       name: order.user.name,
       user: get(order, 'user._id', null), // GAMB
-    };
+    }];
     const createEmailDTO: CreateEmailDTO = {
-      recipient,
+      recipients,
       type,
       relatedTo: order._id,
     };
@@ -69,12 +88,54 @@ export class EmailsService {
 
     try {
       await newEmail.save();
+
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
         null,
         'EmailsService.sendNewOrderEmail',
+        error,
+        newEmail,
+      );
+    }
+  }
+
+  async sendErrorsEmail(
+    errors: AppErrorDocument[],
+    admins: UserDocument[],
+  ): Promise<void> {
+    const recipients: EmailRecipient[] = [];
+
+    admins.forEach((admin) => {
+      recipients.push({
+        email: admin.email,
+        name: admin.name ?? null,
+        user: admin._id ?? null,
+      });
+    });
+
+    const createEmailDTO: CreateEmailDTO = {
+      recipients,
+      type: EmailTypes.NEW_ERRORS,
+      relatedTo: null,
+    };
+
+    const newEmail = await this.createEmail(createEmailDTO);
+    const sendParamsMessage = this.setupSendEmailParams(newEmail);
+    const errorsEmailHTML = getErrorsEmailHTML(errors);
+    sendParamsMessage.Messages[0].HTMLPart = errorsEmailHTML;
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+
+    try {
+      await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendErrorsEmail',
         error,
         newEmail,
       );
@@ -127,6 +188,16 @@ export class EmailsService {
   }
 
   setupSendEmailParams(email: EmailDocument): mailjet.Email.SendParams {
+
+    const recipients: mailjet.Email.SendParamsRecipient[] = [];
+
+    email.recipients.forEach((recipient) => {
+      recipients.push({
+        Email: recipient.email,
+        Name: get(recipient, 'name', ''),
+      });
+    });
+
     const sendParamsMessage: mailjet.Email.SendParams = {
       Messages: [
         {
@@ -134,12 +205,7 @@ export class EmailsService {
             Email: this.configService.get('MJ_FROM_EMAIL'),
             Name: this.configService.get('MJ_FROM_NAME'),
           },
-          To: [
-            {
-              Email: email.recipient.email,
-              Name: get(email, 'recipient.name', ''),
-            },
-          ],
+          To: recipients,
           Subject: EmailSubjects[email.type],
           // TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
           // HTMLPart: html,
@@ -182,13 +248,19 @@ export class EmailsService {
         EmailStatuses.error,
       );
       return result;
+
     } catch (error) {
       console.log(error);
+      //
+      let err = get(error, 'response.body.Messages[0].Errors[0]', null);
+      if(!err) {
+        err = get(error, 'response.error', null);
+      }
       // Log error into DB - not await
       this.errorsService.createAppError(
         null,
         'EmailsService.sendMail',
-        error,
+        err ? err : error,
         sendParams,
       );
       return EmailStatuses.error;

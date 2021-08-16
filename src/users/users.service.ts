@@ -57,6 +57,10 @@ export class UsersService {
     return found;
   }
 
+  async getAdminUsers(): Promise<UserDocument[]> {
+    return await this.usersModel.find({ roles: { $in: [Role.ADMIN] } });
+  }
+
   // Método usado no AuthController e JWTStrategy
   async getUserByEmailWithPassword(email: string): Promise<UserDocument> {
     return await this.usersModel.findOne({

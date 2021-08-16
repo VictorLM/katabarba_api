@@ -21,10 +21,23 @@ export class MercadoPagoService {
     private configService: ConfigService,
     private errorsService: ErrorsService,
   ) {
-    MercadoPago.configure({
-      access_token: this.configService.get('MP_ACCESS_TOKEN'),
-      sandbox: true, // TODO
-    });
+    try {
+      MercadoPago.configure({
+        access_token: this.configService.get('MP_ACCESS_TOKEN'),
+        sandbox: true, // TODO
+      });
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'MercadoPagoService.constructor',
+        error,
+        null,
+      );
+      throw new InternalServerErrorException('Erro ao inicializar MercadoPagoService');
+    }
   }
 
   // TODO - WEBHOOKS URL PAINEL MP - TIPO > PAGAMENTOS

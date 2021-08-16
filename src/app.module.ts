@@ -20,6 +20,8 @@ import { ErrorsModule } from './errors/errors.module';
 import { HttpExceptionsModule } from './http-exceptions/http-exceptions.module';
 import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './all-exceptions.filter';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CronModule } from './cron/cron.module';
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { AllExceptionsFilter } from './all-exceptions.filter';
         useUnifiedTopology: true
       }),
     }),
+    ErrorsModule,
     SiteModule,
     AuthModule,
     ChangesModule,
@@ -49,8 +52,9 @@ import { AllExceptionsFilter } from './all-exceptions.filter';
     MercadoPagoModule,
     AdminModule,
     EmailsModule,
-    ErrorsModule,
     HttpExceptionsModule,
+    ScheduleModule.forRoot(),
+    CronModule,
   ],
   controllers: [AppController],
   providers: [
