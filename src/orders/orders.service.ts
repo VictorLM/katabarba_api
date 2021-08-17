@@ -60,6 +60,10 @@ export class OrdersService {
     return foundOrder;
   }
 
+  async getPayedOrdersAndPopulatePayments(): Promise<OrderDocument[]> {
+    return await this.ordersModel.find({ status: OrderStatuses.PAYMENT_RECEIVED }).populate('payment');
+  }
+
   async handleNewOrder(
     createOrderDto: CreateOrderDto,
     user: UserDocument,

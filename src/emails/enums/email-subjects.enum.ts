@@ -5,7 +5,7 @@ export enum EmailSubjects {
   ORDER_SHIPPED = 'Seu pedido foi enviado',
   ORDER_PAYMENT_REMINDER = 'Lembrete de pagamento do seu pedido',
   // PRODUCTS
-  PRODUCT_AVAILABLE = 'O produto que você queria está disponível',
+  PRODUCT_AVAILABLE = 'O produto que você quer está de volta',
   // ERRORS
   NEW_ERRORS = 'Novo(s) erro(s) da aplicação',
   // WARNINGS

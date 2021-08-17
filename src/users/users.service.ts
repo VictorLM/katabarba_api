@@ -57,8 +57,19 @@ export class UsersService {
     return found;
   }
 
-  async getAdminUsers(): Promise<UserDocument[]> {
-    return await this.usersModel.find({ roles: { $in: [Role.ADMIN] } });
+  async getAdminUsersAndThrowIfErrors(): Promise<UserDocument[]> {
+    const admins = await this.usersModel.find({
+      inactivated: null,
+      roles: { $in: [Role.ADMIN] },
+    });
+
+    if(admins.length < 1) {
+      throw new NotFoundException('Nenhum administrador encontrado');
+    } else if(admins.length > 10) {
+      throw new InternalServerErrorException(`Número de admins > 10. ${admins.length} adiministradores encontrados! Verificar`);
+    } else {
+      return admins;
+    }
   }
 
   // Método usado no AuthController e JWTStrategy

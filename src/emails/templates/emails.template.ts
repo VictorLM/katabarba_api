@@ -1,7 +1,22 @@
 import { AppErrorDocument } from "../../errors/models/app-error.schema";
 import { OrderDocument } from "../../orders/models/order.schema";
+import { ProductAvailableNotificationDocument } from "../models/product-available-notification.schema";
 
 // TODO - DEFINIR COM JOW
+
+function objectToKeyValue(object: any): string {
+  let html = '';
+  if(typeof object === 'object') {
+    Object.keys(object).forEach((obj) => {
+      html = html + `
+        <p><b>${obj}:</b> <code>${object[obj]}</code></p>
+      `;
+    });
+  }
+  return html;
+}
+
+// TODO - ORDERS > ADD VALOR FRETE E TOTAL PRICE AO FINAL DA LISTA DE PRODUTOS
 // ORDERS
 export function getCreateOrderHTML(order: OrderDocument): string {
   let html =`
@@ -123,14 +138,55 @@ export function getErrorsEmailHTML(errors: AppErrorDocument[]): string {
   return html;
 }
 
-function objectToKeyValue(object: any): string {
-  let html = '';
-  if(typeof object === 'object') {
-    Object.keys(object).forEach((obj) => {
+// PRODUCT AVAILABLE NOTIFICATION
+
+export function getProductAvailableNotificationEmailHTML(
+  // Product populated
+  productAvailableNotification: ProductAvailableNotificationDocument,
+  appUrl: string,
+): string {
+  let html =`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <body>
+    <h2>O produto que você está esperando está disponível agora.</h2>
+    <br/>
+    <h3>
+      <a href="${appUrl}/produtos/${productAvailableNotification.product}">
+        ${productAvailableNotification.product.name}
+      </a>
+    </h3>
+    <p>Corra para nossa loja virtual e dê uma olhada!</p>
+    <br/>`;
+
+  html = html + `</body></html>`;
+
+  return html;
+}
+
+// ORDER X PAYMENT CONFLICT
+
+export function getOrderPaymentConflictEmailHTML(
+  // Payment populated
+  payedOrdersWithConflict: OrderDocument[],
+): string {
+  let html =`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <body>
+    <h2>Alerta! Conflitos nos valores dos Pedidos x Pagamentos:</h2>
+    <br/>`;
+
+    payedOrdersWithConflict.forEach(pQWC => {
       html = html + `
-        <p><b>${obj}:</b> <code>${object[obj]}</code></p>
+        <h3><b>Pedido ID: </b>${pQWC._id}</h3>
+        <p><b>Valor total do Pedido: </b> R$ ${pQWC.totalPrice}</p>
+        <p><b>Valor total do Pagamento: </b> R$ ${pQWC.payment.productsAmount + pQWC.payment.shippingAmount}</p>
+        <hr/>
       `;
     });
-  }
+
+  html = html + `</body></html>`;
+
   return html;
 }

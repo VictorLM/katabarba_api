@@ -11,8 +11,10 @@ import { CreateEmailDTO } from './dtos/email.dto';
 import {
   getCreateOrderHTML,
   getErrorsEmailHTML,
+  getOrderPaymentConflictEmailHTML,
   getOrderPaymentReminderHTML,
   getPayedOrderHTML,
+  getProductAvailableNotificationEmailHTML,
   getShippedOrderHTML,
 } from './templates/emails.template';
 import { OrderDocument } from '../orders/models/order.schema';
@@ -27,10 +29,12 @@ import {
   ProductAvailableNotification,
   ProductAvailableNotificationDocument,
 } from './models/product-available-notification.schema';
-import { CreateProductAvailableNotificationDTO } from './dtos/product-available-notification.dto';
+import {
+  CreateProductAvailableNotificationDTO,
+} from './dtos/product-available-notification.dto';
 import { ProductsService } from '../products/products.service';
 import { AppErrorDocument } from '../errors/models/app-error.schema';
-import { UserDocument } from '../users/models/user.schema';
+import { User, UserDocument } from '../users/models/user.schema';
 
 @Injectable()
 export class EmailsService {
@@ -51,7 +55,6 @@ export class EmailsService {
         this.configService.get('MJ_APIKEY_PUBLIC'),
         this.configService.get('MJ_APIKEY_PRIVATE'),
       );
-
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
@@ -61,113 +64,117 @@ export class EmailsService {
         error,
         null,
       );
-      throw new InternalServerErrorException('Erro ao inicializar EmailsService.');
-    }
-  }
-
-  async sendOrderEmail(
-    order: OrderDocument,
-    type: EmailTypes,
-  ): Promise<void> {
-    const recipients: EmailRecipient[] = [{
-      email: order.user.email,
-      name: order.user.name,
-      user: get(order, 'user._id', null), // GAMB
-    }];
-    const createEmailDTO: CreateEmailDTO = {
-      recipients,
-      type,
-      relatedTo: order._id,
-    };
-
-    const newEmail = await this.createEmail(createEmailDTO);
-    const sendParamsMessage = this.setupSendEmailParams(newEmail);
-    const orderEmailHTML = this.getOrderEmailHTML(newEmail, order);
-    sendParamsMessage.Messages[0].HTMLPart = orderEmailHTML;
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-
-    try {
-      await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendNewOrderEmail',
-        error,
-        newEmail,
+      throw new InternalServerErrorException(
+        'Erro ao inicializar EmailsService.',
       );
     }
   }
 
-  async sendErrorsEmail(
-    errors: AppErrorDocument[],
-    admins: UserDocument[],
-  ): Promise<void> {
-    const recipients: EmailRecipient[] = [];
-
-    admins.forEach((admin) => {
+  buildSendEmailParams(
+    email: EmailDocument,
+    document: any,
+  ): mailjet.Email.SendParams {
+    const recipients: mailjet.Email.SendParamsRecipient[] = [];
+    email.recipients.forEach((recipient) => {
       recipients.push({
-        email: admin.email,
-        name: admin.name ?? null,
-        user: admin._id ?? null,
+        Email: recipient.email,
+        Name: get(recipient, 'name', ''),
       });
     });
 
-    const createEmailDTO: CreateEmailDTO = {
-      recipients,
-      type: EmailTypes.NEW_ERRORS,
-      relatedTo: null,
+    let html = '';
+    if (
+      email.type === EmailTypes.ORDER_CREATE ||
+      email.type === EmailTypes.ORDER_PAYED ||
+      email.type === EmailTypes.ORDER_SHIPPED ||
+      email.type === EmailTypes.ORDER_PAYMENT_REMINDER
+    ) {
+      html = this.getOrderEmailHTML(email, document);
+    } else if (email.type === EmailTypes.PRODUCT_AVAILABLE) {
+      html = getProductAvailableNotificationEmailHTML(
+        document,
+        this.configService.get('APP_URL'),
+      );
+    } else if (email.type === EmailTypes.NEW_ERRORS) {
+      html = getErrorsEmailHTML(document);
+    } else if (email.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
+      html = getOrderPaymentConflictEmailHTML(document);
+    } else {
+      throw new InternalServerErrorException('Tipo de e-mail inválido');
+    }
+
+    if(!html) {
+      throw new InternalServerErrorException('Erro ao montar template HTML para e-mail');
+    }
+    const sendParamsMessage: mailjet.Email.SendParams = {
+      Messages: [
+        {
+          From: {
+            Email: this.configService.get('MJ_FROM_EMAIL'),
+            Name: this.configService.get('MJ_FROM_NAME'),
+          },
+          To: recipients,
+          Subject: EmailSubjects[email.type],
+          // TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
+          HTMLPart: html,
+          CustomID: email._id,
+        },
+      ],
     };
+    return sendParamsMessage;
+  }
 
-    const newEmail = await this.createEmail(createEmailDTO);
-    const sendParamsMessage = this.setupSendEmailParams(newEmail);
-    const errorsEmailHTML = getErrorsEmailHTML(errors);
-    sendParamsMessage.Messages[0].HTMLPart = errorsEmailHTML;
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-
-    try {
-      await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendErrorsEmail',
-        error,
-        newEmail,
+  getOrderEmailHTML(email: EmailDocument, order: OrderDocument): string {
+    if (email.type === EmailTypes.ORDER_CREATE) {
+      return getCreateOrderHTML(order);
+    } else if (email.type === EmailTypes.ORDER_PAYED) {
+      return getPayedOrderHTML(order);
+    } else if (email.type === EmailTypes.ORDER_SHIPPED) {
+      // TODO - A Order tem que vir com o Shipment populated
+      return getShippedOrderHTML(order);
+    } else if (email.type === EmailTypes.ORDER_PAYMENT_REMINDER) {
+      return getOrderPaymentReminderHTML(
+        order,
+        this.configService.get('APP_URL'),
       );
     }
   }
 
-  async createProductAvailableNotification(
-    createProductAvailableNotificationDTO: CreateProductAvailableNotificationDTO,
-  ): Promise<void> {
-    const { email, product } = createProductAvailableNotificationDTO;
+  buildRecipientsArray(
+    recipients: UserDocument[] | User[] | string,
+  ): EmailRecipient[] {
+    const recipientsArray: EmailRecipient[] = [];
 
-    const foundProduct = await this.productsService.getProductById(product);
-
-    const newProductAvailableNotification =
-      new this.productAvailableNotificationsModel({
-        recipient: email,
-        product: foundProduct,
+    if(typeof recipients === 'string') {
+      recipientsArray.push({
+        email: recipients,
+        name: null,
+        user: null,
       });
 
-    try {
-      await newProductAvailableNotification.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.createProductAvailableNotification',
-        error,
-        newProductAvailableNotification,
-      );
+    } else {
+      recipients.forEach((recipient) => {
+        recipientsArray.push({
+          email: recipient.email,
+          name: get(recipient, 'name', null),
+          user: get(recipient, '_id', null),
+        });
+      });
     }
+    return recipientsArray;
+  }
+
+  async newEmail(
+    recipients: EmailRecipient[],
+    type: EmailTypes,
+    relatedTo: Types.ObjectId | null,
+  ): Promise<EmailDocument> {
+    const createEmailDTO: CreateEmailDTO = {
+      recipients,
+      type,
+      relatedTo,
+    };
+    return await this.createEmail(createEmailDTO);
   }
 
   async createEmail(createEmailDTO: CreateEmailDTO): Promise<EmailDocument> {
@@ -187,49 +194,101 @@ export class EmailsService {
     }
   }
 
-  setupSendEmailParams(email: EmailDocument): mailjet.Email.SendParams {
+  async sendOrderEmail(
+    // User populated
+    order: OrderDocument,
+    type: EmailTypes,
+  ): Promise<void> {
+    const recipients = this.buildRecipientsArray([order.user]);
+    const newEmail = await this.newEmail(recipients, type, order._id);
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, order);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+    try {
+      await newEmail.save();
 
-    const recipients: mailjet.Email.SendParamsRecipient[] = [];
-
-    email.recipients.forEach((recipient) => {
-      recipients.push({
-        Email: recipient.email,
-        Name: get(recipient, 'name', ''),
-      });
-    });
-
-    const sendParamsMessage: mailjet.Email.SendParams = {
-      Messages: [
-        {
-          From: {
-            Email: this.configService.get('MJ_FROM_EMAIL'),
-            Name: this.configService.get('MJ_FROM_NAME'),
-          },
-          To: recipients,
-          Subject: EmailSubjects[email.type],
-          // TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
-          // HTMLPart: html,
-          CustomID: email._id,
-        },
-      ],
-    };
-
-    return sendParamsMessage;
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendOrderEmail',
+        error,
+        newEmail,
+      );
+    }
   }
 
-  getOrderEmailHTML(email: EmailDocument, order: OrderDocument): string {
-    // TODO OTHER ORDER TEMPLATES
-    if (email.type === EmailTypes.ORDER_CREATE) {
-      return getCreateOrderHTML(order);
-    } else if (email.type === EmailTypes.ORDER_PAYED) {
-      return getPayedOrderHTML(order);
-    } else if (email.type === EmailTypes.ORDER_SHIPPED) {
-      // TODO - A Order tem que vir com o Shipment populated
-      return getShippedOrderHTML(order);
-    } else if (email.type === EmailTypes.ORDER_PAYMENT_REMINDER) {
-      return getOrderPaymentReminderHTML(
-        order,
-        this.configService.get('APP_URL'),
+  async sendErrorsEmail(
+    errors: AppErrorDocument[],
+    admins: UserDocument[],
+  ): Promise<void> {
+    const recipients = this.buildRecipientsArray(admins);
+    const newEmail = await this.newEmail(recipients, EmailTypes.NEW_ERRORS, null);
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, errors);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+
+    try {
+      await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendErrorsEmail',
+        error,
+        newEmail,
+      );
+    }
+  }
+
+  async sendOrderPaymentConflictsEmail(
+    // Payment populated
+    payedOrdersWithConflict: OrderDocument[],
+    admins: UserDocument[],
+  ): Promise<void> {
+    const recipients = this.buildRecipientsArray(admins);
+    const newEmail = await this.newEmail(recipients, EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT, null);
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, payedOrdersWithConflict);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+    try {
+      await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendOrderPaymentConflictsEmail',
+        error,
+        newEmail,
+      );
+    }
+  }
+
+  async sendProductAvailableNotificationsEmail(
+    // Product populated
+    productAvailableNotification: ProductAvailableNotificationDocument,
+  ): Promise<EmailDocument> {
+    const recipients = this.buildRecipientsArray(productAvailableNotification.recipient);
+    const newEmail = await this.newEmail(
+      recipients,
+      EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT,
+      productAvailableNotification._id,
+    );
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, productAvailableNotification.product);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+    try {
+      return await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendProductAvailableNotificationsEmail',
+        error,
+        newEmail,
       );
     }
   }
@@ -248,12 +307,11 @@ export class EmailsService {
         EmailStatuses.error,
       );
       return result;
-
     } catch (error) {
       console.log(error);
       //
       let err = get(error, 'response.body.Messages[0].Errors[0]', null);
-      if(!err) {
+      if (!err) {
         err = get(error, 'response.error', null);
       }
       // Log error into DB - not await
@@ -323,6 +381,41 @@ export class EmailsService {
     });
 
     await this.createEmailEvents(createEmailEventsDTO);
+  }
+
+  // TODO - MOVER PARA PRODUTOS SERVICE?
+  async getNotSentProductAvailableNotifications(): Promise<
+  ProductAvailableNotificationDocument[]
+  > {
+    return await this.productAvailableNotificationsModel
+      .find({ email: null })
+      .populate('product');
+  }
+
+  // TODO - MOVER PARA PRODUCTS SERVICE?
+  async createProductAvailableNotification(
+    createProductAvailableNotificationDTO: CreateProductAvailableNotificationDTO,
+  ): Promise<void> {
+    const { email, product } = createProductAvailableNotificationDTO;
+    const foundProduct = await this.productsService.getProductById(product);
+    const newProductAvailableNotification =
+      new this.productAvailableNotificationsModel({
+        recipient: email,
+        product: foundProduct,
+      });
+    try {
+      await newProductAvailableNotification.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.createProductAvailableNotification',
+        error,
+        newProductAvailableNotification,
+      );
+    }
   }
 
 }
