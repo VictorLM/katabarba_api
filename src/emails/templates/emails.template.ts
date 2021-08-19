@@ -1,6 +1,8 @@
+import { PasswordResetTokenDocument } from "../../auth/models/password-reset-token.schema";
 import { AppErrorDocument } from "../../errors/models/app-error.schema";
 import { OrderDocument } from "../../orders/models/order.schema";
 import { ProductAvailableNotificationDocument } from "../models/product-available-notification.schema";
+import { get } from 'lodash';
 
 // TODO - DEFINIR COM JOW
 
@@ -145,6 +147,7 @@ export function getProductAvailableNotificationEmailHTML(
   productAvailableNotification: ProductAvailableNotificationDocument,
   appUrl: string,
 ): string {
+  console.log(productAvailableNotification);
   let html =`
   <!DOCTYPE html>
   <html lang="pt-BR">
@@ -187,6 +190,31 @@ export function getOrderPaymentConflictEmailHTML(
     });
 
   html = html + `</body></html>`;
+
+  return html;
+}
+
+// USER PASSWORD RESET
+
+export function getPasswordResetEmailHTML(
+  // User populated
+  passwordResetTokenDocument: PasswordResetTokenDocument,
+  appUrl: string,
+): string {
+  const html =`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <body>
+    <h2>Foi solicitada a redefinição da sua senha.</h2>
+    <h3>
+      Para prosseguir com a refinição de senha
+      <a href="${appUrl}/auth/redefinir-senha/${get(passwordResetTokenDocument, 'user._id', '123')}/${passwordResetTokenDocument.token}">
+        clique aqui.
+      </a>
+    </h3>
+    <p>PS: Este link expira em uma hora.</p>
+    <p>Caso você não tenha feito esta solicitação, recomendamos que troque sua senha.</p>
+    </body></html>`;
 
   return html;
 }

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as mailjet from 'node-mailjet';
 import { ConfigService } from '@nestjs/config';
 import { ErrorsService } from '../errors/errors.service';
@@ -13,6 +13,7 @@ import {
   getErrorsEmailHTML,
   getOrderPaymentConflictEmailHTML,
   getOrderPaymentReminderHTML,
+  getPasswordResetEmailHTML,
   getPayedOrderHTML,
   getProductAvailableNotificationEmailHTML,
   getShippedOrderHTML,
@@ -35,6 +36,7 @@ import {
 import { ProductsService } from '../products/products.service';
 import { AppErrorDocument } from '../errors/models/app-error.schema';
 import { User, UserDocument } from '../users/models/user.schema';
+import { PasswordResetTokenDocument } from '../auth/models/password-reset-token.schema';
 
 @Injectable()
 export class EmailsService {
@@ -99,6 +101,8 @@ export class EmailsService {
       html = getErrorsEmailHTML(document);
     } else if (email.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
       html = getOrderPaymentConflictEmailHTML(document);
+    } else if (email.type === EmailTypes.USER_PASSWORD_RESET) {
+        html = getPasswordResetEmailHTML(document, this.configService.get('APP_URL'));
     } else {
       throw new InternalServerErrorException('Tipo de e-mail inválido');
     }
@@ -273,10 +277,10 @@ export class EmailsService {
     const recipients = this.buildRecipientsArray(productAvailableNotification.recipient);
     const newEmail = await this.newEmail(
       recipients,
-      EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT,
+      EmailTypes.PRODUCT_AVAILABLE,
       productAvailableNotification._id,
     );
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, productAvailableNotification.product);
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, productAvailableNotification);
     newEmail.status = await this.sendEmail(sendParamsMessage);
     try {
       return await newEmail.save();
@@ -287,6 +291,33 @@ export class EmailsService {
       this.errorsService.createAppError(
         null,
         'EmailsService.sendProductAvailableNotificationsEmail',
+        error,
+        newEmail,
+      );
+    }
+  }
+
+  async sendPasswordResetEmail(
+    // User populated
+    passwordResetTokenDocument: PasswordResetTokenDocument,
+  ): Promise<EmailDocument> {
+    const recipients = this.buildRecipientsArray([passwordResetTokenDocument.user]);
+    const newEmail = await this.newEmail(
+      recipients,
+      EmailTypes.USER_PASSWORD_RESET,
+      passwordResetTokenDocument._id,
+    );
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, passwordResetTokenDocument);
+    newEmail.status = await this.sendEmail(sendParamsMessage);
+    try {
+      return await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendPasswordResetEmail',
         error,
         newEmail,
       );
@@ -397,12 +428,25 @@ export class EmailsService {
     createProductAvailableNotificationDTO: CreateProductAvailableNotificationDTO,
   ): Promise<void> {
     const { email, product } = createProductAvailableNotificationDTO;
+
     const foundProduct = await this.productsService.getProductById(product);
+
+    const foundNotification = await this.productAvailableNotificationsModel.findOne({
+      email: null,
+      recipient: email,
+      product: foundProduct,
+    });
+
+    if(foundNotification) {
+      throw new ConflictException('Já existe uma Notificação cadastrada para esse e-mail referente a esse Produto');
+    }
+
     const newProductAvailableNotification =
       new this.productAvailableNotificationsModel({
         recipient: email,
         product: foundProduct,
       });
+
     try {
       await newProductAvailableNotification.save();
 

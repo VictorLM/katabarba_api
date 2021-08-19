@@ -4,6 +4,8 @@ export enum EmailSubjects {
   ORDER_PAYED = 'Recebemos o pagamento do seu pedido',
   ORDER_SHIPPED = 'Seu pedido foi enviado',
   ORDER_PAYMENT_REMINDER = 'Lembrete de pagamento do seu pedido',
+  // USER
+  USER_PASSWORD_RESET = 'Solicitação de redefinição de senha',
   // PRODUCTS
   PRODUCT_AVAILABLE = 'O produto que você quer está de volta',
   // ERRORS

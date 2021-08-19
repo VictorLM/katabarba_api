@@ -192,4 +192,30 @@ export class UsersService {
     }
   }
 
+  async resetUserPassword(
+    user: UserDocument,
+    password: string,
+  ): Promise<void> {
+    // Log changes into DB - not awaiting
+    this.changesService.createChange('users', 'User Password Reset', { ...user }, user._id);
+    user.password = await this.authService.hashPassword(password);
+    try {
+      await user.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        user._id,
+        'UsersService.resetUserPassword',
+        error,
+        user,
+      );
+      throw new InternalServerErrorException(
+        'Erro ao redefinir senha. Por favor, tente novamente mais tarde',
+      );
+    }
+
+  }
+
 }

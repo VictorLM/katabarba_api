@@ -44,6 +44,14 @@ export class SignUpDto extends UserBaseDto {
   readonly password: string;
 }
 
+export class PasswordDto {
+  @IsNotEmpty({ message: 'Campo Senha é obrigatório' })
+  @IsString({ message: 'Senha deve conter apenas caracteres comuns' })
+  @MinLength(6, { message: 'Senha deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(32, { message: 'Senha deve ter no máximo $constraint1 caracteres'})
+  readonly password: string;
+}
+
 export class ChangeUserPasswordDto {
   @IsNotEmpty({ message: 'Campo Senha Atual é obrigatório' })
   @IsString({ message: 'Senha Atual deve conter apenas caracteres comuns' })

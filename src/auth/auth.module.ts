@@ -7,9 +7,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { ErrorsModule } from '../errors/errors.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { PasswordResetToken, PasswordResetTokenSchema } from './models/password-reset-token.schema';
+import { EmailsModule } from '../emails/emails.module';
 
 @Module({
   imports: [
+    EmailsModule,
     ErrorsModule,
     forwardRef(() => UsersModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -24,6 +28,9 @@ import { ErrorsModule } from '../errors/errors.module';
       }),
       inject: [ConfigService],
     }),
+    MongooseModule.forFeature([
+      { name: PasswordResetToken.name, schema: PasswordResetTokenSchema },
+    ]),
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

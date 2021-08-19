@@ -6,8 +6,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { get } from 'lodash';
 import { OrderDocument } from '../orders/models/order.schema';
+import { get } from 'lodash';
 
 @Injectable()
 export class CronService {
@@ -15,8 +15,8 @@ export class CronService {
     private emailService: EmailsService,
     private errorsService: ErrorsService,
     private usersService: UsersService,
-    private productsService: ProductsService,
-    private paymentsService: PaymentsService,
+    private productsService: ProductsService, // TODO
+    private paymentsService: PaymentsService, // TODO
     private ordersService: OrdersService,
   ) {}
 
@@ -44,14 +44,12 @@ export class CronService {
   }
 
   // TODO - THROW ERROR INSIDE FOREACH STOPS THE LOOP?
-  // @Cron(CronExpression.EVERY_6_HOURS)
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_6_HOURS)
   async sendProductAvailableNotificationEmail(): Promise<void> {
     console.log('CRON - ENVIANDO NOTIFICAÇÕES DE PRODUTOS QUE VOLTARAM AO ESTOQUE POR E-MAIL');
     const notSentProductAvailableNotifications = await this.emailService.getNotSentProductAvailableNotifications();
-    // console.log(notSentProductAvailableNotifications);
     if(notSentProductAvailableNotifications.length > 0) {
-      notSentProductAvailableNotifications.forEach(async (pAN) => { // forEach levantando ERRO
+      notSentProductAvailableNotifications.forEach(async (pAN) => {
         if(get(pAN, 'product.name', null)) {
           if(pAN.product.stock > 0) {
             console.log('Enviando notificação de produto que voltou ao estoque');
