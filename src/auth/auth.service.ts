@@ -24,12 +24,16 @@ import {
 } from './dtos/password-reset.dto';
 import { UserDocument } from '../users/models/user.schema';
 import { EmailsService } from '../emails/emails.service';
+import { Login, LoginDocument } from './models/login.schema';
+import { LoginResult } from './enums/login-result.enum';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(PasswordResetToken.name)
     private passwordResetTokensModel: Model<PasswordResetTokenDocument>,
+    @InjectModel(Login.name)
+    private loginModel: Model<LoginDocument>,
     private jwtService: JwtService,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
@@ -42,17 +46,53 @@ export class AuthService {
     await this.usersService.createUser(signUpDto);
   }
 
-  async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
+  async signIn(
+    signInDto: SignInDto,
+    ip: string,
+    agent: string,
+  ): Promise<{ accessToken: string }> {
     const { email, password } = signInDto;
     const user = await this.usersService.getUserByEmailWithPassword(email);
-    // TODO - LOGIN EVENT TO DB
     // Tirei o try catch porque ao lançar o erro estava caindo no catch
     if (user && (await this.passwordCompare(password, user.password))) {
       const payload: JwtPayload = { email };
       const accessToken: string = this.jwtService.sign(payload);
+      // login to DB - not await
+      this.createLogin(user, ip, agent, LoginResult.SUCCESS);
       return { accessToken };
+
     } else {
+      // login to DB - not await
+      this.createLogin(user, ip, agent, LoginResult.FAIL);
       throw new UnauthorizedException('Email e/ou senha inválidos');
+    }
+  }
+
+  async createLogin(
+    user: UserDocument,
+    ip: string,
+    agent: string,
+    result: LoginResult,
+  ): Promise<void> {
+    const newLogin = new this.loginModel({
+      user,
+      ip,
+      agent,
+      result,
+    });
+
+    try {
+      await newLogin.save();
+
+    } catch(error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'AuthService.createLogin',
+        error,
+        newLogin,
+      );
     }
   }
 
@@ -98,7 +138,7 @@ export class AuthService {
       try {
         await this.usersService.resetUserPassword(foundUser, password);
         await foundPasswordResetToken.delete();
-
+        // TODO - E-MAIL AVISANDO SOBRE TROCA DA SENHA
       } catch(error) {
         console.log(error);
         // Log error into DB - not await

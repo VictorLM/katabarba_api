@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Ip, Patch, Post, Headers } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from '../users/dtos/user.dto';
 import { SignInDto } from './dtos/auth.dto';
@@ -14,8 +14,12 @@ export class AuthController {
   }
 
   @Post('/signin')
-  signIn(@Body() signInDto: SignInDto): Promise<{ accessToken: string }> {
-    return this.authService.signIn(signInDto);
+  signIn(
+    @Body() signInDto: SignInDto,
+    @Ip() ip: string, // TODO - TESTAR SE ESTÁ PEGANDO OS IPS
+    @Headers('user-agent') agent: string,
+  ): Promise<{ accessToken: string }> {
+    return this.authService.signIn(signInDto, ip, agent);
   }
 
   @Post('/password-reset')

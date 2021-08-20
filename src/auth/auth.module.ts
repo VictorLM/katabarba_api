@@ -10,6 +10,7 @@ import { ErrorsModule } from '../errors/errors.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PasswordResetToken, PasswordResetTokenSchema } from './models/password-reset-token.schema';
 import { EmailsModule } from '../emails/emails.module';
+import { Login, LoginSchema } from './models/login.schema';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { EmailsModule } from '../emails/emails.module';
     }),
     MongooseModule.forFeature([
       { name: PasswordResetToken.name, schema: PasswordResetTokenSchema },
+      { name: Login.name, schema: LoginSchema },
     ]),
   ],
   providers: [AuthService, JwtStrategy],
