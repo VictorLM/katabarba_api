@@ -72,6 +72,13 @@ export class EmailsService {
     }
   }
 
+  async getEmailsWithErrors(): Promise<EmailDocument[]> {
+    return await this.emailsModel.find({
+      status: EmailStatuses.error,
+      resend: { $ne: null}, // TODO - SET MANUALLY VIA PANEL AFTER ADMIN CHECK
+    });
+  }
+
   buildSendEmailParams(
     email: EmailDocument,
     document: any,
@@ -413,6 +420,73 @@ export class EmailsService {
 
     await this.createEmailEvents(createEmailEventsDTO);
   }
+
+  async resendFailedOrderEmail(
+    email: EmailDocument,
+    // User populated
+    order: OrderDocument,
+  ): Promise<void> {
+    const sendParamsMessage = this.buildSendEmailParams(email, order);
+    email.status = await this.sendEmail(sendParamsMessage);
+    email.resend = null;
+    try {
+      await email.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.resendFailedOrderEmail',
+        error,
+        email,
+      );
+    }
+  }
+
+  // async resendEmailWithError(
+  //   email: EmailDocument,
+  // ): Promise<EmailDocument> {
+
+  //   if (
+  //     email.type === EmailTypes.ORDER_CREATE ||
+  //     email.type === EmailTypes.ORDER_PAYED ||
+  //     email.type === EmailTypes.ORDER_SHIPPED ||
+  //     email.type === EmailTypes.ORDER_PAYMENT_REMINDER
+  //   ) {
+  //     const document = await this.orders
+  //   } else if (email.type === EmailTypes.PRODUCT_AVAILABLE) {
+  //     html = getProductAvailableNotificationEmailHTML(
+  //       document,
+  //       this.configService.get('APP_URL'),
+  //     );
+  //   } else if (email.type === EmailTypes.NEW_ERRORS) {
+  //     html = getErrorsEmailHTML(document);
+  //   } else if (email.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
+  //     html = getOrderPaymentConflictEmailHTML(document);
+  //   } else if (email.type === EmailTypes.USER_PASSWORD_RESET) {
+  //       html = getPasswordResetEmailHTML(document, this.configService.get('APP_URL'));
+  //   } else {
+  //     const document = null;
+  //   }
+
+  //   const sendParamsMessage = this.buildSendEmailParams(email, document);
+
+  //   email.status = await this.sendEmail(sendParamsMessage);
+  //   try {
+  //     return await email.save();
+
+  //   } catch (error) {
+  //     console.log(error);
+  //     // Log error into DB - not await
+  //     this.errorsService.createAppError(
+  //       null,
+  //       'EmailsService.sendPasswordResetEmail',
+  //       error,
+  //       email,
+  //     );
+  //   }
+  // }
 
   // TODO - MOVER PARA PRODUTOS SERVICE?
   async getNotSentProductAvailableNotifications(): Promise<

@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import * as mongoose from 'mongoose';
+import { Document, Types} from 'mongoose';
 import { EmailTypes } from '../enums/email-types.enum';
 import { EmailStatuses } from '../enums/email-statuses.enum';
 import { EmailRecipient } from '../interfaces/email-recipient.interface.';
 
-export type EmailDocument = Email & mongoose.Document;
+export type EmailDocument = Email & Document;
 
 @Schema({ collection: 'emails', timestamps: true })
 export class Email {
@@ -12,11 +12,11 @@ export class Email {
   recipients: EmailRecipient[];
 
   @Prop({
-    type: mongoose.Schema.Types.ObjectId,
+    type: Types.ObjectId,
     required: false,
     default: null,
   })
-  relatedTo: mongoose.Schema.Types.ObjectId;
+  relatedTo: Types.ObjectId;
 
   @Prop({
     required: true,

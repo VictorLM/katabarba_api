@@ -8,6 +8,10 @@ import { UsersService } from '../users/users.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrderDocument } from '../orders/models/order.schema';
 import { get } from 'lodash';
+import { EmailTypes } from '../emails/enums/email-types.enum';
+import { Types } from 'mongoose';
+import { OrderStatuses } from '../orders/enums/order-statuses.enum';
+import { EmailStatuses } from '../emails/enums/email-statuses.enum';
 
 @Injectable()
 export class CronService {
@@ -79,7 +83,7 @@ export class CronService {
     }
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_HOUR) // TODO - VAI DAR TEMPO ANTES DO STATUS DA ORDEM SER ALTERADO?
   async sendOrderPaymentConflictEmail(): Promise<void> {
     console.log('CRON - ENVIANDO CONFLITOS DE VALORES PEDIDOS X PAGAMENTO POR E-MAIL AOS ADMINS');
     const payedOrders = await this.ordersService.getPayedOrdersAndPopulatePayments();
@@ -111,6 +115,55 @@ export class CronService {
         }
       }
     }
+  }
+
+  @Cron(CronExpression.EVERY_6_HOURS)
+  async resendEmailsWithErrors(): Promise<void> {
+    console.log('CRON - REENVIANDO E-MAILS COM ERROS');
+    const emailsWithErrors = await this.emailService.getEmailsWithErrors();
+
+    if(emailsWithErrors.length > 0) {
+      try {
+        emailsWithErrors.forEach(async (emailWithError) => {
+          if (
+            emailWithError.type === EmailTypes.ORDER_CREATE ||
+            emailWithError.type === EmailTypes.ORDER_PAYED ||
+            emailWithError.type === EmailTypes.ORDER_SHIPPED ||
+            emailWithError.type === EmailTypes.ORDER_PAYMENT_REMINDER
+          ) {
+            const order = await this.ordersService.getOrderById(emailWithError.relatedTo);
+            if(order.status !== OrderStatuses.CANCELED) {
+              await this.emailService.resendFailedOrderEmail(emailWithError, order);
+            } else {
+              emailWithError.resend = null;
+              emailWithError.status = EmailStatuses.expired;
+              await emailWithError.save();
+            }
+          } else if (emailWithError.type === EmailTypes.PRODUCT_AVAILABLE) {
+            // TODO
+          } else if (emailWithError.type === EmailTypes.NEW_ERRORS) {
+            // TODO
+          } else if (emailWithError.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
+            // TODO
+          } else if (emailWithError.type === EmailTypes.USER_PASSWORD_RESET) {
+            // TODO
+          } else {
+            // TODO
+          }
+        });
+
+      } catch (error) {
+        console.log(error);
+        // Log error into DB - not await
+        this.errorsService.createAppError(
+          null,
+          'CronService.resendEmailsWithErrors',
+          error,
+          null,
+        );
+      }
+    }
+
   }
 
 }
