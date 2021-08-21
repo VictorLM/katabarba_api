@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { EmailsService } from '../emails/emails.service';
 import { ErrorsService } from '../errors/errors.service';
 import { OrdersService } from '../orders/orders.service';
@@ -9,14 +9,13 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrderDocument } from '../orders/models/order.schema';
 import { get } from 'lodash';
 import { EmailTypes } from '../emails/enums/email-types.enum';
-import { Types } from 'mongoose';
 import { OrderStatuses } from '../orders/enums/order-statuses.enum';
 import { EmailStatuses } from '../emails/enums/email-statuses.enum';
 
 @Injectable()
 export class CronService {
   constructor(
-    private emailService: EmailsService,
+    private emailsService: EmailsService,
     private errorsService: ErrorsService,
     private usersService: UsersService,
     private productsService: ProductsService, // TODO
@@ -32,7 +31,12 @@ export class CronService {
       try {
         const admins = await this.usersService.getAdminUsersAndThrowIfErrors();
         console.log('Enviando erros não tratados por e-mail ao(s) administrador(es)');
-        await this.emailService.sendErrorsEmail(errors, admins);
+        await this.emailsService.sendEmail({
+          document: errors,
+          type: EmailTypes.NEW_ERRORS,
+          recipients: admins,
+          relatedTo: null,
+        });
 
       } catch (error) {
         console.log(error);
@@ -44,6 +48,8 @@ export class CronService {
           null,
         );
       }
+    } else {
+      console.log('Nenhum erro não tratado foi encontrado');
     }
   }
 
@@ -51,13 +57,18 @@ export class CronService {
   @Cron(CronExpression.EVERY_6_HOURS)
   async sendProductAvailableNotificationEmail(): Promise<void> {
     console.log('CRON - ENVIANDO NOTIFICAÇÕES DE PRODUTOS QUE VOLTARAM AO ESTOQUE POR E-MAIL');
-    const notSentProductAvailableNotifications = await this.emailService.getNotSentProductAvailableNotifications();
+    const notSentProductAvailableNotifications = await this.emailsService.getNotSentProductAvailableNotifications();
     if(notSentProductAvailableNotifications.length > 0) {
       notSentProductAvailableNotifications.forEach(async (pAN) => {
         if(get(pAN, 'product.name', null)) {
           if(pAN.product.stock > 0) {
             console.log('Enviando notificação de produto que voltou ao estoque');
-            pAN.email = await this.emailService.sendProductAvailableNotificationsEmail(pAN);
+            pAN.email = await this.emailsService.sendEmail({
+              document: pAN,
+              type: EmailTypes.PRODUCT_AVAILABLE,
+              recipients: pAN.recipient,
+              relatedTo: pAN._id,
+            });
             await pAN.save();
           } else {
             console.log(`Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque: ${pAN}`);
@@ -65,7 +76,7 @@ export class CronService {
             this.errorsService.createAppError(
               null,
               'CronService.sendProductAvailableNotificationEmail',
-              { error: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque' },
+              { message: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque' },
               pAN,
             );
           }
@@ -80,6 +91,8 @@ export class CronService {
           );
         }
       });
+    } else {
+      console.log('Nenhuma notificação de produto que voltou ao estoque encontrada');
     }
   }
 
@@ -101,7 +114,12 @@ export class CronService {
         try {
           const admins = await this.usersService.getAdminUsersAndThrowIfErrors();
           console.log('Enviando conflitos de valores dos Pedidos x Pagamentos por e-mail ao(s) administrador(es)');
-          await this.emailService.sendOrderPaymentConflictsEmail(payedOrdersWithConflict, admins);
+          await this.emailsService.sendEmail({
+            document: payedOrdersWithConflict,
+            type: EmailTypes.VALUE_CONFLICT,
+            recipients: admins,
+            relatedTo: null,
+          });
 
         } catch (error) {
           console.log(error);
@@ -113,14 +131,16 @@ export class CronService {
             null,
           );
         }
+      } else {
+        console.log('Nenhum conflito de valores dos Pedidos x Pagamentos encontrado');
       }
     }
   }
 
-  @Cron(CronExpression.EVERY_6_HOURS)
+  @Cron(CronExpression.EVERY_2_HOURS)
   async resendEmailsWithErrors(): Promise<void> {
     console.log('CRON - REENVIANDO E-MAILS COM ERROS');
-    const emailsWithErrors = await this.emailService.getEmailsWithErrors();
+    const emailsWithErrors = await this.emailsService.getEmailsWithErrors();
 
     if(emailsWithErrors.length > 0) {
       try {
@@ -132,24 +152,43 @@ export class CronService {
             emailWithError.type === EmailTypes.ORDER_PAYMENT_REMINDER
           ) {
             const order = await this.ordersService.getOrderById(emailWithError.relatedTo);
-            if(order.status !== OrderStatuses.CANCELED) {
-              await this.emailService.resendFailedOrderEmail(emailWithError, order);
-            } else {
-              emailWithError.resend = null;
+
+            if(order.status === OrderStatuses.CANCELED) {
               emailWithError.status = EmailStatuses.expired;
+              emailWithError.resend = null;
               await emailWithError.save();
+              return;
             }
+
+            await this.emailsService.resendEmail({
+              email: emailWithError,
+              document: order,
+            });
+
           } else if (emailWithError.type === EmailTypes.PRODUCT_AVAILABLE) {
-            // TODO
+            const notification = await this.emailsService.getNotSentProductAvailableNotificationById(emailWithError.relatedTo);
+
+            await this.emailsService.resendEmail({
+              email: emailWithError,
+              document: notification,
+            });
+
           } else if (emailWithError.type === EmailTypes.NEW_ERRORS) {
-            // TODO
-          } else if (emailWithError.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
-            // TODO
+            // TODO - RIP
+            console.log('Reenvio de e-mails com errors ainda não implementado');
+
+          } else if (emailWithError.type === EmailTypes.VALUE_CONFLICT) {
+            // TODO - RIP
+            console.log('Reenvio de e-mails com conflitos de Pedidos x Pagamentos ainda não implementado');
+
           } else if (emailWithError.type === EmailTypes.USER_PASSWORD_RESET) {
-            // TODO
+            // TODO - RIP
+            console.log('Reenvio de e-mails de redefinição de senha do usuário ainda não implementado');
+
           } else {
-            // TODO
+            throw new InternalServerErrorException('Tipo de e-mail inválido');
           }
+
         });
 
       } catch (error) {

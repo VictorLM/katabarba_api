@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException
+} from '@nestjs/common';
 import * as mailjet from 'node-mailjet';
 import { ConfigService } from '@nestjs/config';
 import { ErrorsService } from '../errors/errors.service';
@@ -7,7 +13,7 @@ import { Model, Types } from 'mongoose';
 import { EmailSubjects } from './enums/email-subjects.enum';
 import { Email, EmailDocument } from './models/email.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { CreateEmailDTO } from './dtos/email.dto';
+import { CreateEmailDTO, ResendEmailDTO, SendEmailDTO } from './dtos/email.dto';
 import {
   getCreateOrderHTML,
   getErrorsEmailHTML,
@@ -34,9 +40,7 @@ import {
   CreateProductAvailableNotificationDTO,
 } from './dtos/product-available-notification.dto';
 import { ProductsService } from '../products/products.service';
-import { AppErrorDocument } from '../errors/models/app-error.schema';
 import { User, UserDocument } from '../users/models/user.schema';
-import { PasswordResetTokenDocument } from '../auth/models/password-reset-token.schema';
 
 @Injectable()
 export class EmailsService {
@@ -75,8 +79,59 @@ export class EmailsService {
   async getEmailsWithErrors(): Promise<EmailDocument[]> {
     return await this.emailsModel.find({
       status: EmailStatuses.error,
-      resend: { $ne: null}, // TODO - SET MANUALLY VIA PANEL AFTER ADMIN CHECK
+      resend: { $ne: null}, // TODO - SET TO RESEND MANUALLY VIA PANEL AFTER ADMIN CHECK THE ERROR
     });
+  }
+
+  /**
+   * Prepara os dados para criação de um novo Email model,
+   * chama a função para efetivamente criar o novo model,
+   * prepara os dados para envio da mensagem de e-mail via API,
+   * chama a função para efetivamente enviar a mensagem de  e-mail,
+   * atualiza o status do Email model criado (error ou success)
+   * com base na resposta da API
+   *
+   * DocumentModel recebido como parâmetro deve vir com o relacionamento populado,
+   * caso haja, para montagem do template HTML
+   *
+   * @param {SendEmailDTO} sendEmailDTO
+   * document
+   * @param {OrderDocument} document - EmailTypes: ORDER_CREATE, ORDER_PAYED, ORDER_SHIPPED, ORDER_PAYMENT_REMINDER
+   * @param {OrderDocument[]} document - EmailTypes: VALUE_CONFLICT
+   * @param {ProductAvailableNotification} document - EmailTypes: PRODUCT_AVAILABLE
+   * @param {AppErrorDocument[]} document - EmailTypes: NEW_ERRORS
+   * @param {PasswordResetTokenDocument} document - EmailTypes: USER_PASSWORD_RESET
+   * type
+   * @param {EmailTypes} type - Enum EmailTypes
+   * recipients
+   * @param {string} recipients - EmailTypes: PRODUCT_AVAILABLE
+   * @param {others} recipients - EmailTypes: Todos os outros EmailTypes
+   * relatedTo
+   * @param {Types.ObjectId | null} relatedTo - ID do documento relacionado, caso haja (Order, Product)
+  */
+  async sendEmail(
+    // Relation populated if exists
+    sendEmailDTO: SendEmailDTO,
+  ): Promise<EmailDocument> {
+    const { document, type, recipients, relatedTo } = sendEmailDTO;
+    const recipientsArray = this.buildRecipientsArray(recipients);
+    const newEmail = await this.newEmail(recipientsArray, type, relatedTo);
+    const sendParamsMessage = this.buildSendEmailParams(newEmail, document);
+    newEmail.status = await this.sendEmailAPI(sendParamsMessage);
+
+    try {
+      return await newEmail.save();
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'EmailsService.sendEmail',
+        error,
+        newEmail,
+      );
+    }
   }
 
   buildSendEmailParams(
@@ -91,6 +146,28 @@ export class EmailsService {
       });
     });
 
+    const sendParamsMessage: mailjet.Email.SendParams = {
+      Messages: [
+        {
+          From: {
+            Email: this.configService.get('MJ_FROM_EMAIL'),
+            Name: this.configService.get('MJ_FROM_NAME'),
+          },
+          To: recipients,
+          Subject: EmailSubjects[email.type],
+          // TextPart: '', // TODO
+          HTMLPart: this.buildEmailHTMLTemplate(email, document),
+          CustomID: email._id,
+        },
+      ],
+    };
+    return sendParamsMessage;
+  }
+
+  buildEmailHTMLTemplate(
+    email: EmailDocument,
+    document: any,
+  ): string {
     let html = '';
     if (
       email.type === EmailTypes.ORDER_CREATE ||
@@ -106,7 +183,7 @@ export class EmailsService {
       );
     } else if (email.type === EmailTypes.NEW_ERRORS) {
       html = getErrorsEmailHTML(document);
-    } else if (email.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
+    } else if (email.type === EmailTypes.VALUE_CONFLICT) {
       html = getOrderPaymentConflictEmailHTML(document);
     } else if (email.type === EmailTypes.USER_PASSWORD_RESET) {
         html = getPasswordResetEmailHTML(document, this.configService.get('APP_URL'));
@@ -117,22 +194,8 @@ export class EmailsService {
     if(!html) {
       throw new InternalServerErrorException('Erro ao montar template HTML para e-mail');
     }
-    const sendParamsMessage: mailjet.Email.SendParams = {
-      Messages: [
-        {
-          From: {
-            Email: this.configService.get('MJ_FROM_EMAIL'),
-            Name: this.configService.get('MJ_FROM_NAME'),
-          },
-          To: recipients,
-          Subject: EmailSubjects[email.type],
-          // TextPart: `Email enviado automaticamente por ${this.configService.get('APP_NAME')}`,
-          HTMLPart: html,
-          CustomID: email._id,
-        },
-      ],
-    };
-    return sendParamsMessage;
+
+    return html;
   }
 
   getOrderEmailHTML(email: EmailDocument, order: OrderDocument): string {
@@ -152,7 +215,7 @@ export class EmailsService {
   }
 
   buildRecipientsArray(
-    recipients: UserDocument[] | User[] | string,
+    recipients: UserDocument | UserDocument[] | User | User[] | string,
   ): EmailRecipient[] {
     const recipientsArray: EmailRecipient[] = [];
 
@@ -163,13 +226,20 @@ export class EmailsService {
         user: null,
       });
 
-    } else {
+    } else if(Array.isArray(recipients)) {
       recipients.forEach((recipient) => {
         recipientsArray.push({
           email: recipient.email,
           name: get(recipient, 'name', null),
           user: get(recipient, '_id', null),
         });
+      });
+
+    } else {
+      recipientsArray.push({
+        email: recipients.email,
+        name: get(recipients, 'name', null),
+        user: get(recipients, '_id', null),
       });
     }
     return recipientsArray;
@@ -205,133 +275,7 @@ export class EmailsService {
     }
   }
 
-  async sendOrderEmail(
-    // User populated
-    order: OrderDocument,
-    type: EmailTypes,
-  ): Promise<void> {
-    const recipients = this.buildRecipientsArray([order.user]);
-    const newEmail = await this.newEmail(recipients, type, order._id);
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, order);
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-    try {
-      await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendOrderEmail',
-        error,
-        newEmail,
-      );
-    }
-  }
-
-  async sendErrorsEmail(
-    errors: AppErrorDocument[],
-    admins: UserDocument[],
-  ): Promise<void> {
-    const recipients = this.buildRecipientsArray(admins);
-    const newEmail = await this.newEmail(recipients, EmailTypes.NEW_ERRORS, null);
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, errors);
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-
-    try {
-      await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendErrorsEmail',
-        error,
-        newEmail,
-      );
-    }
-  }
-
-  async sendOrderPaymentConflictsEmail(
-    // Payment populated
-    payedOrdersWithConflict: OrderDocument[],
-    admins: UserDocument[],
-  ): Promise<void> {
-    const recipients = this.buildRecipientsArray(admins);
-    const newEmail = await this.newEmail(recipients, EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT, null);
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, payedOrdersWithConflict);
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-    try {
-      await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendOrderPaymentConflictsEmail',
-        error,
-        newEmail,
-      );
-    }
-  }
-
-  async sendProductAvailableNotificationsEmail(
-    // Product populated
-    productAvailableNotification: ProductAvailableNotificationDocument,
-  ): Promise<EmailDocument> {
-    const recipients = this.buildRecipientsArray(productAvailableNotification.recipient);
-    const newEmail = await this.newEmail(
-      recipients,
-      EmailTypes.PRODUCT_AVAILABLE,
-      productAvailableNotification._id,
-    );
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, productAvailableNotification);
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-    try {
-      return await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendProductAvailableNotificationsEmail',
-        error,
-        newEmail,
-      );
-    }
-  }
-
-  async sendPasswordResetEmail(
-    // User populated
-    passwordResetTokenDocument: PasswordResetTokenDocument,
-  ): Promise<EmailDocument> {
-    const recipients = this.buildRecipientsArray([passwordResetTokenDocument.user]);
-    const newEmail = await this.newEmail(
-      recipients,
-      EmailTypes.USER_PASSWORD_RESET,
-      passwordResetTokenDocument._id,
-    );
-    const sendParamsMessage = this.buildSendEmailParams(newEmail, passwordResetTokenDocument);
-    newEmail.status = await this.sendEmail(sendParamsMessage);
-    try {
-      return await newEmail.save();
-
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendPasswordResetEmail',
-        error,
-        newEmail,
-      );
-    }
-  }
-
-  async sendEmail(
+  async sendEmailAPI(
     sendParams: mailjet.Email.SendParams,
   ): Promise<EmailStatuses> {
     try {
@@ -345,6 +289,7 @@ export class EmailsService {
         EmailStatuses.error,
       );
       return result;
+
     } catch (error) {
       console.log(error);
       //
@@ -358,11 +303,14 @@ export class EmailsService {
         'EmailsService.sendMail',
         err ? err : error,
         sendParams,
-      );
+        );
       return EmailStatuses.error;
     }
   }
 
+  /**
+  * Bulk insert of EmailEvent documents into DB.
+  */
   async createEmailEvents(
     createEmailEventsDTO: CreateEmailEventDTO[],
   ): Promise<void> {
@@ -380,6 +328,9 @@ export class EmailsService {
     }
   }
 
+  /**
+  * Get webhook object actions.
+  */
   async emailEventsNotificationWebHook(
     emailEventsNotificationDTO: EmailEventNotificationDTO[],
   ): Promise<void> {
@@ -397,7 +348,7 @@ export class EmailsService {
           : undefined,
         mjContactID: emailEvent.mj_contact_id,
         customCampaign: emailEvent.customcampaign
-          ? emailEvent.customcampaign
+        ? emailEvent.customcampaign
           : undefined,
         messageID: emailEvent.MessageID,
         messageGUID: emailEvent.Message_GUID,
@@ -421,86 +372,57 @@ export class EmailsService {
     await this.createEmailEvents(createEmailEventsDTO);
   }
 
-  async resendFailedOrderEmail(
-    email: EmailDocument,
-    // User populated
-    order: OrderDocument,
-  ): Promise<void> {
-    const sendParamsMessage = this.buildSendEmailParams(email, order);
-    email.status = await this.sendEmail(sendParamsMessage);
+  async resendEmail(
+    resendFailedEmailDTO: ResendEmailDTO,
+  ): Promise<EmailDocument> {
+    const { email, document } = resendFailedEmailDTO;
+
+    const sendParamsMessage = this.buildSendEmailParams(email, document);
+    email.status = await this.sendEmailAPI(sendParamsMessage);
     email.resend = null;
+
     try {
-      await email.save();
+      return await email.save();
 
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
       this.errorsService.createAppError(
         null,
-        'EmailsService.resendFailedOrderEmail',
+        'EmailsService.resendEmail',
         error,
         email,
       );
     }
   }
 
-  // async resendEmailWithError(
-  //   email: EmailDocument,
-  // ): Promise<EmailDocument> {
-
-  //   if (
-  //     email.type === EmailTypes.ORDER_CREATE ||
-  //     email.type === EmailTypes.ORDER_PAYED ||
-  //     email.type === EmailTypes.ORDER_SHIPPED ||
-  //     email.type === EmailTypes.ORDER_PAYMENT_REMINDER
-  //   ) {
-  //     const document = await this.orders
-  //   } else if (email.type === EmailTypes.PRODUCT_AVAILABLE) {
-  //     html = getProductAvailableNotificationEmailHTML(
-  //       document,
-  //       this.configService.get('APP_URL'),
-  //     );
-  //   } else if (email.type === EmailTypes.NEW_ERRORS) {
-  //     html = getErrorsEmailHTML(document);
-  //   } else if (email.type === EmailTypes.ORDER_PAYMENT_VALUE_CONFLICT) {
-  //     html = getOrderPaymentConflictEmailHTML(document);
-  //   } else if (email.type === EmailTypes.USER_PASSWORD_RESET) {
-  //       html = getPasswordResetEmailHTML(document, this.configService.get('APP_URL'));
-  //   } else {
-  //     const document = null;
-  //   }
-
-  //   const sendParamsMessage = this.buildSendEmailParams(email, document);
-
-  //   email.status = await this.sendEmail(sendParamsMessage);
-  //   try {
-  //     return await email.save();
-
-  //   } catch (error) {
-  //     console.log(error);
-  //     // Log error into DB - not await
-  //     this.errorsService.createAppError(
-  //       null,
-  //       'EmailsService.sendPasswordResetEmail',
-  //       error,
-  //       email,
-  //     );
-  //   }
-  // }
-
   // TODO - MOVER PARA PRODUTOS SERVICE?
   async getNotSentProductAvailableNotifications(): Promise<
   ProductAvailableNotificationDocument[]
   > {
     return await this.productAvailableNotificationsModel
-      .find({ email: null })
-      .populate('product');
+    .find({ email: null })
+    .populate('product');
+  }
+
+  // TODO - MOVER PARA PRODUTOS SERVICE?
+  async getNotSentProductAvailableNotificationById(
+    id: Types.ObjectId
+  ): Promise<ProductAvailableNotificationDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID "${id}" inválido`);
+    }
+    const foundNotification = await this.productAvailableNotificationsModel.findById(id).populate('product');
+    if (!foundNotification) {
+      throw new NotFoundException(`Notificação com ID "${id}" não encontrada`);
+    }
+    return foundNotification;
   }
 
   // TODO - MOVER PARA PRODUCTS SERVICE?
   async createProductAvailableNotification(
     createProductAvailableNotificationDTO: CreateProductAvailableNotificationDTO,
-  ): Promise<void> {
+    ): Promise<void> {
     const { email, product } = createProductAvailableNotificationDTO;
 
     const foundProduct = await this.productsService.getProductById(product);
@@ -521,7 +443,7 @@ export class EmailsService {
         product: foundProduct,
       });
 
-    try {
+      try {
       await newProductAvailableNotification.save();
 
     } catch (error) {
@@ -532,8 +454,8 @@ export class EmailsService {
         'EmailsService.createProductAvailableNotification',
         error,
         newProductAvailableNotification,
-      );
+        );
+      }
     }
-  }
 
-}
+  }

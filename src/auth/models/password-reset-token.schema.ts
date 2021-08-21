@@ -21,7 +21,7 @@ export class PasswordResetToken {
     default: Date.now,
     index: { expires: '1h' }, // To self-delete after one hour
   })
-  createdAt: Date; // TODO - TESTAR SE ESTÁ SE APAGANDO DPS DE UMA HORA
+  createdAt: Date;
 }
 
 export const PasswordResetTokenSchema = SchemaFactory.createForClass(PasswordResetToken);

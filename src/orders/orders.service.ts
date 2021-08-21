@@ -117,7 +117,12 @@ export class OrdersService {
     );
 
     // Send email - not await
-    this.emailsService.sendOrderEmail(newOrder, EmailTypes.ORDER_CREATE);
+    this.emailsService.sendEmail({
+      document: newOrder,
+      type: EmailTypes.ORDER_CREATE,
+      recipients: newOrder.user,
+      relatedTo: newOrder._id,
+    });
 
     return { mpPreferenceId };
   }
@@ -243,7 +248,12 @@ export class OrdersService {
     if (payment.status === PaymentStatuses.approved) {
       foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;
       // Send email - not await
-      this.emailsService.sendOrderEmail(foundOrder, EmailTypes.ORDER_PAYED);
+      this.emailsService.sendEmail({
+        document: foundOrder,
+        type: EmailTypes.ORDER_PAYED,
+        recipients: foundOrder.user,
+        relatedTo: foundOrder._id,
+      });
     }
 
     try {

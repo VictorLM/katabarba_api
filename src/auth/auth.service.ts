@@ -26,6 +26,7 @@ import { UserDocument } from '../users/models/user.schema';
 import { EmailsService } from '../emails/emails.service';
 import { Login, LoginDocument } from './models/login.schema';
 import { LoginResult } from './enums/login-result.enum';
+import { EmailTypes } from '../emails/enums/email-types.enum';
 
 @Injectable()
 export class AuthService {
@@ -108,7 +109,13 @@ export class AuthService {
     const foundToken = await this.getPasswordResetTokenByUserAndPopulate(foundUser);
 
     if(foundToken) {
-      await this.emailsService.sendPasswordResetEmail(foundToken);
+      // Send email
+      await this.emailsService.sendEmail({
+        document: foundToken,
+        type: EmailTypes.USER_PASSWORD_RESET,
+        recipients: foundToken.user,
+        relatedTo: foundToken._id,
+      });
 
     } else {
       const randomString = randomBytes(32).toString('hex');
@@ -116,8 +123,13 @@ export class AuthService {
         user: foundUser,
         token: randomString,
       });
-
-      await this.emailsService.sendPasswordResetEmail(newPasswordResetToken);
+      // Send email
+      await this.emailsService.sendEmail({
+        document: newPasswordResetToken,
+        type: EmailTypes.USER_PASSWORD_RESET,
+        recipients: newPasswordResetToken.user,
+        relatedTo: newPasswordResetToken._id,
+      });
 
       const hashedToken = await this.hashToken(randomString);
       newPasswordResetToken.token = hashedToken;
@@ -127,7 +139,7 @@ export class AuthService {
 
   async passwordReset(passwordResetDTO: PasswordResetDTO): Promise<void> {
     const { userId, token, password } = passwordResetDTO;
-    const foundUser = await this.usersService.getUserById(userId);
+    const foundUser = await this.usersService.getUserByIdWithPassword(userId);
     const foundPasswordResetToken = await this.getPasswordResetTokenByUserAndPopulate(foundUser);
 
     if(!foundPasswordResetToken) {

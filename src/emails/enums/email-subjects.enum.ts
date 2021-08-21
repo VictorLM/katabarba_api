@@ -11,6 +11,6 @@ export enum EmailSubjects {
   // ERRORS
   NEW_ERRORS = 'Novo(s) erro(s) da aplicação',
   // WARNINGS
-  ORDER_PAYMENT_VALUE_CONFLICT = 'Novo(s) conflito(s) de valor Order x Pagamento',
+  VALUE_CONFLICT = 'Novo(s) conflito(s) de valor Order x Pagamento',
 }
 // TODO - NF EMITIDA?
