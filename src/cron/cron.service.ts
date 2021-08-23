@@ -201,6 +201,8 @@ export class CronService {
           null,
         );
       }
+    } else {
+      console.log('Nenhum e-mail com erro encontrado');
     }
 
   }

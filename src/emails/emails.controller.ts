@@ -34,4 +34,10 @@ export class EmailsController {
       createProductAvailableNotificationDTO,
     );
   }
+
+  @Post('/test')
+  test() {
+    return this.emailsService.test();
+  }
+
 }

@@ -10,8 +10,11 @@ export class Address {
   @Prop({ required: true })
   street: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false, default: null })
   number: number;
+
+  @Prop({ required: true })
+  district: string;
 
   @Prop({ required: false })
   complement: string;

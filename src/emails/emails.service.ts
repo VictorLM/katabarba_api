@@ -41,6 +41,7 @@ import {
 } from './dtos/product-available-notification.dto';
 import { ProductsService } from '../products/products.service';
 import { User, UserDocument } from '../users/models/user.schema';
+import * as pug from 'pug';
 
 @Injectable()
 export class EmailsService {
@@ -110,7 +111,6 @@ export class EmailsService {
    * @param {Types.ObjectId | null} relatedTo - ID do documento relacionado, caso haja (Order, Product)
   */
   async sendEmail(
-    // Relation populated if exists
     sendEmailDTO: SendEmailDTO,
   ): Promise<EmailDocument> {
     const { document, type, recipients, relatedTo } = sendEmailDTO;
@@ -175,7 +175,14 @@ export class EmailsService {
       email.type === EmailTypes.ORDER_SHIPPED ||
       email.type === EmailTypes.ORDER_PAYMENT_REMINDER
     ) {
-      html = this.getOrderEmailHTML(email, document);
+      // html = this.getOrderEmailHTML(email, document);
+      // TODO IF PARA PEGAR O HTML CERTO
+      // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+      html = pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
+        title: EmailSubjects[email.type],
+        order: document,
+      })
+
     } else if (email.type === EmailTypes.PRODUCT_AVAILABLE) {
       html = getProductAvailableNotificationEmailHTML(
         document,
@@ -456,6 +463,119 @@ export class EmailsService {
         newProductAvailableNotification,
         );
       }
+    }
+
+    test() {
+      const order = {
+        "status": "AWAITING_PAYMENT",
+        "payment": null,
+        "productsAndQuantities": [
+          {
+            "product": {
+              "freeShipment": null,
+              "images": [
+                "https://www.dhresource.com/0x0/f2/albu/g10/M01/78/FB/rBVaVlxxHyqACdfOAACRzYjO42Y063.jpg/fashion-man-bathroom-apron-beard-king-bib.jpg"
+              ],
+              "_id": "6105547e4181bd7c493bd4dd",
+              "name": "Teste de nome de produto",
+              "description": "Teste de descrição de produto",
+              "price": 49.9,
+              "stock": 38,
+              "available": true,
+              "weight": 0.5,
+              "dimensions": {
+                "productDimensions": {
+                  "length": 150,
+                  "width": 100,
+                  "height": 5
+                },
+                "productBoxDimensions": {
+                  "length": 30,
+                  "width": 20,
+                  "height": 10
+                }
+              },
+              "category": "fashion",
+              "createdAt": "2021-08-04T14:04:11.050Z",
+              "updatedAt": "2021-08-21T15:32:12.951Z"
+            },
+            "quantity": 2
+          }
+        ],
+        "mpPreferenceId": null,
+        "_id": "6123d770f6bc902be848222e",
+        "user": {
+          "inactivated": null,
+          "roles": [
+            "CUSTOMER",
+            "ADMIN"
+          ],
+          "_id": "611420060187d01894110975",
+          "email": "victordinami@gmail.com",
+          "password": "$2b$10$dfBaoY5rqh3fINpOE1nZsuCJZ5gAFb295moPnQy2zVGUPLgt37kvC",
+          "name": "Victor",
+          "surname": "Meireles",
+          "cpf": 12345678900,
+          "phone": 19992242988,
+          "createdAt": "2021-08-11T19:07:50.347Z",
+          "updatedAt": "2021-08-21T15:45:20.158Z",
+          "__v": 0
+        },
+        "shipment": {
+          "statuses": [],
+          "trackingCode": null,
+          "shipped": null,
+          "_id": "6123d76ff6bc902be848222c",
+          "shiptAddress": {
+            "number": 123,
+            "_id": "6105563d609a8f1b6689488b",
+            "street": "Rua de Teste",
+            "city": "Teste de Cidade",
+            "state": "SP",
+            "zipCode": "13026064",
+            "user": "610553ce956c1a1930982f7b",
+            "createdAt": "2021-07-31T13:46:22.817Z",
+            "updatedAt": "2021-07-31T13:46:22.817Z",
+            "__v": 0,
+            "district": "teste"
+          },
+          "deliveryAddress": {
+            "number": 123,
+            "_id": "6123b2f23b8d3d13e087c93f",
+            "street": "Rua de Teste",
+            "district": "Bairro de Teste",
+            "city": "Teste de Cidade",
+            "state": "SP",
+            "zipCode": "22441020",
+            "user": "611420060187d01894110975",
+            "createdAt": "2021-08-23T14:38:42.188Z",
+            "updatedAt": "2021-08-23T14:38:42.188Z",
+            "__v": 0
+          },
+          "company": "CORREIOS",
+          "type": "SEDEX",
+          "cost": 38.2,
+          "deadline": 1,
+          "createdAt": "2021-08-23T17:14:23.882Z",
+          "updatedAt": "2021-08-23T17:14:23.882Z",
+          "__v": 0
+        },
+        "totalPrice": 138,
+        "createdAt": "2021-08-23T17:14:24.058Z",
+        "updatedAt": "2021-08-23T17:14:24.058Z",
+        "__v": 0
+      };
+
+      // TODO - MASK TO VALUES - PHONE, CEP
+      console.log(pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
+        title: EmailSubjects.ORDER_CREATE, // TODO - email.type
+        order,
+      }));
+
+      return pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
+        title: EmailSubjects.ORDER_CREATE, // TODO - email.type
+        order,
+      })
     }
 
   }

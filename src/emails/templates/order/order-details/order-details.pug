@@ -1,0 +1,65 @@
+div
+  p DETALHES DO PEDIDO
+  table
+      tr
+        td Nome:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{order.user.name}
+      tr
+        td Email:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{order.user.email}
+      tr
+        td Telefone:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{'(' + String(order.user.phone).substr(0, 2) + ') ' + String(order.user.phone).substr(2)}
+  hr
+  p ITENS DO PEDIDO
+  table
+    tbody
+      each productAndQuantity in order.productsAndQuantities
+        tr
+          td(style='width: 30%;')
+            img(style='width: 100%; border-radius: 1rem;')(src=productAndQuantity.product.images[0] alt="Produto")
+          td(style='width: 70%; padding-left: 2rem;')
+            span(style='font-size: 1.2rem; font-weight: bold;') #{productAndQuantity.quantity}x #{productAndQuantity.product.name}
+            br
+            span R$ #{Number.parseFloat(productAndQuantity.quantity * productAndQuantity.product.price).toFixed(2).replace('.', ',')}
+  hr
+  p VALORES
+  table
+    tbody
+      tr
+        td Valor produtos:
+        td(style='padding-left: 1.5rem; font-weight: bold;') R$ #{Number.parseFloat(order.totalPrice - order.shipment.cost).toFixed(2).replace('.', ',')}
+      tr
+        td Valor frete:
+        td(style='padding-left: 1.5rem; font-weight: bold;') R$ #{Number.parseFloat(order.shipment.cost).toFixed(2).replace('.', ',')}
+      tr
+        td Valor total:
+        td(style='padding-left: 1.5rem; font-weight: bold;') R$ #{Number.parseFloat(order.totalPrice).toFixed(2).replace('.', ',')}
+  hr
+  p ENDEREÇO DE ENTREGA
+  table
+    tbody
+      tr
+        td CEP:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{String(order.shipment.deliveryAddress.zipCode).substr(0, 5) + '-' + String(order.shipment.deliveryAddress.zipCode).substr(5)}
+      tr
+        td Endereço:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{order.shipment.deliveryAddress.street}, #{order.shipment.deliveryAddress.number}
+
+      if order.shipment.deliveryAddress.complement
+        tr
+          td Complemento:
+          td(style='padding-left: 1.5rem; font-weight: bold;') #{order.shipment.deliveryAddress.complement}
+
+      tr
+        td Bairro:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{order.shipment.deliveryAddress.district}
+      tr
+        td Cidade - UF:
+        td(style='padding-left: 1.5rem; font-weight: bold;') #{order.shipment.deliveryAddress.city} - #{order.shipment.deliveryAddress.state}
+
+  div(style='margin: 2rem 0;')
+    // TODO LINK
+    a(style='background: rgb(87, 120, 255); color: white; text-decoration: none; border-radius: .2rem; padding: .8rem 1.5rem; font-size: .8rem;' target='_blank' href='//google.com' rel='noopener noreferrer') VER MEU PEDIDOS
+
+  hr

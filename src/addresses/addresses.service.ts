@@ -49,10 +49,11 @@ export class AddressesService {
     const foundAddress = await this.getAddressByUser(user);
 
     if(!foundAddress) {
-      const { street, number, complement, city, state, zipCode } = addressDto;
+      const { street, number, district, complement, city, state, zipCode } = addressDto;
       const newAddress = new this.addressesModel({
         street,
         number,
+        district,
         city,
         complement,
         state,
@@ -93,10 +94,11 @@ export class AddressesService {
       // Log changes into DB - not awaiting
       this.changesService.createChange('addresses', 'Address Update', { ...foundAddress }, user._id);
 
-      const { street, number, complement, city, state, zipCode } = addressDto;
+      const { street, number, district, complement, city, state, zipCode } = addressDto;
 
       foundAddress.street = street;
       foundAddress.number = number;
+      foundAddress.district = district;
       foundAddress.city = city;
       foundAddress.complement = complement;
       foundAddress.state = state;

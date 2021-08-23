@@ -17,9 +17,15 @@ export class AddressDto {
   @MaxLength(100, { message: 'Rua deve ter no máximo $constraint1 caracteres' })
   readonly street: string;
 
-  @IsNotEmpty({ message: 'Campo Número é obrigatório' })
+  @IsOptional()
   @IsInt({ message: 'Número inválido' })
   readonly number: number;
+
+  @IsNotEmpty({ message: 'Campo Bairro é obrigatório' })
+  @IsString({ message: 'Bairro deve conter apenas caracteres comuns' })
+  @MinLength(3, { message: 'Bairro deve ter no mínimo $constraint1 caracteres' })
+  @MaxLength(100, { message: 'Bairro deve ter no máximo $constraint1 caracteres' })
+  readonly district: string;
 
   @IsOptional()
   @MinLength(3, { message: 'Complemento deve ter no mínimo $constraint1 caracteres' })
