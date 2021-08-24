@@ -5,6 +5,6 @@ block content
   p(style='font-size: 1.5rem;') Olá, #{order.user.name}! Tudo bem?
   p(style='font-size: 1.5rem;') Já recebemos seu pedido e estamos aguardando a confirmação do pagamento.
 
-  h1 IMAGEM COM ETAPAS DO PEDIDO
+  include order-status/order-status.pug
 
   include order-details/order-details.pug

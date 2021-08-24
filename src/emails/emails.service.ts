@@ -14,6 +14,7 @@ import { EmailSubjects } from './enums/email-subjects.enum';
 import { Email, EmailDocument } from './models/email.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateEmailDTO, ResendEmailDTO, SendEmailDTO } from './dtos/email.dto';
+// TODO - DELETE IMPORT AND FILE
 import {
   getCreateOrderHTML,
   getErrorsEmailHTML,
@@ -175,14 +176,7 @@ export class EmailsService {
       email.type === EmailTypes.ORDER_SHIPPED ||
       email.type === EmailTypes.ORDER_PAYMENT_REMINDER
     ) {
-      // html = this.getOrderEmailHTML(email, document);
-      // TODO IF PARA PEGAR O HTML CERTO
-      // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-      html = pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
-        title: EmailSubjects[email.type],
-        order: document,
-      })
-
+      html = this.getOrderEmailHTML(email, document);
     } else if (email.type === EmailTypes.PRODUCT_AVAILABLE) {
       html = getProductAvailableNotificationEmailHTML(
         document,
@@ -205,11 +199,27 @@ export class EmailsService {
     return html;
   }
 
-  getOrderEmailHTML(email: EmailDocument, order: OrderDocument): string {
+  // TODO - DEPOIS QUE DEFINIR LAYOUT E-MAILS, ALTERAR TODOS OS IF PARA PUG
+  getOrderEmailHTML(
+    email: EmailDocument,
+    order: OrderDocument, // populated
+    ): string {
     if (email.type === EmailTypes.ORDER_CREATE) {
-      return getCreateOrderHTML(order);
+      // return getCreateOrderHTML(order);
+      return pug.renderFile(`${__dirname}/templates/order/order-create.pug`, {
+        title: EmailSubjects.ORDER_CREATE,
+        appUrl: this.configService.get('APP_URL'),
+        order,
+      });
+
     } else if (email.type === EmailTypes.ORDER_PAYED) {
-      return getPayedOrderHTML(order);
+      // return getPayedOrderHTML(order);
+      return pug.renderFile(`${__dirname}/templates/order/order-payed.pug`, {
+        title: EmailSubjects.ORDER_CREATE,
+        appUrl: this.configService.get('APP_URL'),
+        order,
+      });
+
     } else if (email.type === EmailTypes.ORDER_SHIPPED) {
       // TODO - A Order tem que vir com o Shipment populated
       return getShippedOrderHTML(order);
@@ -465,6 +475,7 @@ export class EmailsService {
       }
     }
 
+    // TODO - DELETE
     test() {
       const order = {
         "status": "AWAITING_PAYMENT",
@@ -566,13 +577,12 @@ export class EmailsService {
         "__v": 0
       };
 
-      // TODO - MASK TO VALUES - PHONE, CEP
-      console.log(pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
-        title: EmailSubjects.ORDER_CREATE, // TODO - email.type
-        order,
-      }));
+      // console.log(pug.renderFile(`${__dirname}/templates/order/order-create.pug`, {
+      //   title: EmailSubjects.ORDER_CREATE, // TODO - email.type
+      //   order,
+      // }));
 
-      return pug.renderFile(`${__dirname}/templates/order/new-order.pug`, {
+      return pug.renderFile(`${__dirname}/templates/order/order-payed.pug`, {
         title: EmailSubjects.ORDER_CREATE, // TODO - email.type
         order,
       })

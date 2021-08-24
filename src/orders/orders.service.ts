@@ -49,11 +49,11 @@ export class OrdersService {
     return foundOrder;
   }
 
-  async getOrderByIdAndPopulateUser(id: Types.ObjectId): Promise<OrderDocument> {
+  async getOrderByIdAndPopulateUserAndShipment(id: Types.ObjectId): Promise<OrderDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
-    const foundOrder = await this.ordersModel.findById(id).populate('user');
+    const foundOrder = await this.ordersModel.findById(id).populate('user').populate('shipment');
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
@@ -62,6 +62,36 @@ export class OrdersService {
 
   async getPayedOrdersAndPopulatePayments(): Promise<OrderDocument[]> {
     return await this.ordersModel.find({ status: OrderStatuses.PAYMENT_RECEIVED }).populate('payment');
+  }
+
+  // TODO - FALAR COM JOW - DATA EXPIRAÇÃO
+  async getExpiredOrders(): Promise<OrderDocument[]> {
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() - 8);
+
+    const orders = await this.ordersModel.find({
+      status: OrderStatuses.AWAITING_PAYMENT,
+      createdAt: { $lt: expireDate },
+    }).populate('payment');
+
+    const expiredOrders: OrderDocument[] = [];
+
+    orders.forEach((order) => {
+      if(order.payment) {
+        if(order.payment.status !== PaymentStatuses.approved) {
+          if(order.payment.expiresIn) {
+            if(order.payment.expiresIn < new Date(Date.now())) {
+              expiredOrders.push(order);
+            }
+          } else {
+            expiredOrders.push(order);
+          }
+        }
+      } else {
+        expiredOrders.push(order);
+      }
+    });
+    return expiredOrders;
   }
 
   async handleNewOrder(
@@ -238,12 +268,14 @@ export class OrdersService {
 
   async updateOrderWithPaymentData(payment: PaymentDocument): Promise<void> {
     // GAMB VIOLENTA - Não sei porque o type do campo Order está pegando o Objeto não o ObjectId
-    const foundOrder = await this.getOrderByIdAndPopulateUser(
+    const foundOrder = await this.getOrderByIdAndPopulateUserAndShipment(
       Types.ObjectId(String(payment.order)),
     );
     // Pode ser que o primeiro pagamento seja rejeitado e um segundo aprovado
     // Desta forma vai ser mantido o vínculo com o mais novo
     foundOrder.payment = payment._id;
+
+    // TODO - CHANGES SERVICE
 
     if (payment.status === PaymentStatuses.approved) {
       foundOrder.status = OrderStatuses.PAYMENT_RECEIVED;

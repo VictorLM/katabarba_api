@@ -207,4 +207,22 @@ export class CronService {
 
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_1AM)
+  async cancelExpiredOrdersAndUpdateStocks(): Promise<void> {
+    console.log('CRON - CANCELANDO ORDERS EXPIRADAS E ATUALIZANDO STOCK DOS PRODUTOS DESTAS');
+    const expiredOrders = await this.ordersService.getExpiredOrders();
+
+    if(expiredOrders.length > 0) {
+
+      expiredOrders.forEach(async (order) => {
+        await this.productsService.updateProductsStockFromCanceledOrder(order.productsAndQuantities);
+        order.status = OrderStatuses.CANCELED;
+        await order.save();
+      });
+
+    } else {
+      console.log('Nenhuma order expirada encontrada');
+    }
+  }
+
 }

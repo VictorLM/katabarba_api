@@ -1,0 +1,12 @@
+extends ../base/base.pug
+
+block content
+
+  p(style='font-size: 1.5rem;') Olá, #{order.user.name}! Tudo bem?
+  p(style='font-size: 1.5rem;') Recebemos o pagamento do seu pedido e já estamos preparando sua encomenda.
+  p Estamos processando algumas informações e logo seu pedido será enviado.
+  p Não se preocupe, você receberá um novo e-mail quando seu pedido for despachado, contendo o código de rastreamento.
+
+  include order-status/order-status.pug
+
+  include order-details/order-details.pug

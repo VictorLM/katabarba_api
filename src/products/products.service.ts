@@ -40,6 +40,10 @@ export class ProductsService {
     return found;
   }
 
+  async getProductByIdAndNotThrow(id: Types.ObjectId): Promise<ProductDocument> {
+    return await this.productsModel.findById(id);
+  }
+
   async getProductsAndQuantitiesById(
     productsIdsAndQuanties: ProductOrder[],
   ): Promise<ProductFullOrder[]> {
@@ -114,6 +118,31 @@ export class ProductsService {
       this.errorsService.createAppError(
         null,
         'ProductsService.updateProductsStockByOrderProductsAndQuantities',
+        error,
+        orderProductsAndQuantities,
+      );
+    }
+  }
+
+
+  async updateProductsStockFromCanceledOrder(
+    orderProductsAndQuantities: ProductFullOrder[],
+  ): Promise<void> {
+    try {
+      orderProductsAndQuantities.forEach(async (productAndQuantity) => {
+        const foundProduct = await this.getProductByIdAndNotThrow(productAndQuantity.product._id);
+
+        if(foundProduct) {
+          foundProduct.stock = foundProduct.stock + productAndQuantity.quantity;
+          await foundProduct.save();
+        }
+      });
+
+    } catch (error) {
+      // Log error into DB - not await
+      this.errorsService.createAppError(
+        null,
+        'ProductsService.updateProductsStockFromCanceledOrder',
         error,
         orderProductsAndQuantities,
       );

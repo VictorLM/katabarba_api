@@ -24,7 +24,7 @@ export class HttpExceptionsService {
         null,
         'HttpExceptionsService.createAppHttpException',
         error,
-        null,
+        newAppHttpException,
       );
     }
 

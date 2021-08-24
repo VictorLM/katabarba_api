@@ -17,7 +17,7 @@ div
       each productAndQuantity in order.productsAndQuantities
         tr
           td(style='width: 30%;')
-            img(style='width: 100%; border-radius: 1rem;')(src=productAndQuantity.product.images[0] alt="Produto")
+            img(src=productAndQuantity.product.images[0] alt="Produto" style='width: 100%; border-radius: 1rem;')
           td(style='width: 70%; padding-left: 2rem;')
             span(style='font-size: 1.2rem; font-weight: bold;') #{productAndQuantity.quantity}x #{productAndQuantity.product.name}
             br
@@ -60,6 +60,6 @@ div
 
   div(style='margin: 2rem 0;')
     // TODO LINK
-    a(style='background: rgb(87, 120, 255); color: white; text-decoration: none; border-radius: .2rem; padding: .8rem 1.5rem; font-size: .8rem;' target='_blank' href='//google.com' rel='noopener noreferrer') VER MEU PEDIDOS
+    a(style='background: rgb(87, 120, 255); color: white; text-decoration: none; border-radius: .2rem; padding: .8rem 1.5rem; font-size: .8rem;' target='_blank' href=`${appUrl}/pedidos` rel='noopener noreferrer') VER MEU PEDIDOS
 
   hr
