@@ -10,9 +10,11 @@ import { ShipmentsModule } from '../shipments/shipments.module';
 import { MercadoPagoModule } from '../mercado-pago/mercado-pago.module';
 import { ErrorsModule } from '../errors/errors.module';
 import { EmailsModule } from '../emails/emails.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
+    UsersModule,
     EmailsModule,
     ErrorsModule,
     MercadoPagoModule,

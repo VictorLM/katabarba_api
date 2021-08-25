@@ -24,6 +24,9 @@ import { ErrorsService } from '../errors/errors.service';
 import { ShipmentDocument } from '../shipments/models/shipment.schema';
 import { EmailsService } from '../emails/emails.service';
 import { EmailTypes } from '../emails/enums/email-types.enum';
+import { OrderQueryDTO } from './dtos/order-query.dto';
+import { OrderBy } from '../admin/enum/order-by.enum';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class OrdersService {
@@ -36,7 +39,51 @@ export class OrdersService {
     private mercadoPagoService: MercadoPagoService,
     private errorsService: ErrorsService,
     private emailsService: EmailsService,
+    private usersService: UsersService,
   ) {}
+
+  // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOO - PAGINATION, TOTALCOUNT
+  async getOrders(
+    orderQueryDTO: OrderQueryDTO,
+    ): Promise<{
+      orders: OrderDocument[],
+      page: number,
+      count: number,
+     }> {
+    const { orderBy, orderStatus, customerEmail, orderDate } = orderQueryDTO;
+
+    const query = this.ordersModel.find().populate('user payment');
+
+    if(customerEmail) {
+      const user = await this.usersService.getUserByEmail(customerEmail);
+      query.where('user', user._id);
+    }
+
+    if(orderStatus) {
+      query.where('status', orderStatus);
+    }
+
+    if(orderDate) {
+
+      const date = new Date(orderDate);
+      const datePusOneDay = new Date(orderDate);
+      datePusOneDay.setDate(date.getDate() + 1);
+
+      query.where('createdAt', {
+        $gte: date,
+        $lt: datePusOneDay,
+      });
+    }
+
+    if(orderBy && orderBy === OrderBy.DATE_DESC) {
+      query.sort('-1');
+    } else {
+      query.sort('1');
+    }
+
+    const orders = await query.exec();
+    return { orders, page: 1, count: 10 };
+  }
 
   async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {
     if (!Types.ObjectId.isValid(id)) {

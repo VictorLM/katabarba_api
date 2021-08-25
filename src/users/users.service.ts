@@ -77,7 +77,20 @@ export class UsersService {
     return await this.usersModel.findOne({
        email,
        inactivated: null,
-    }).select('+password').exec();;
+    }).select('+password').exec();
+  }
+
+  async getUserByEmail(email: string): Promise<UserDocument> {
+    const foundUser = await this.usersModel.findOne({
+      email,
+      inactivated: null,
+    });
+
+    if (!foundUser) {
+      throw new NotFoundException(`Usuário com o email ${email} não encontrado`);
+    }
+
+    return foundUser
   }
 
   // Método usado no AuthController

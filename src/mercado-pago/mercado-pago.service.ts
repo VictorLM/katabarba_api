@@ -189,4 +189,9 @@ export class MercadoPagoService {
       throw new InternalServerErrorException();
     }
   }
+
+  // TODO
+  async getMercadoPagoPaymentByOrderPreferenceId() {
+    // TODO
+  }
 }
