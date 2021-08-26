@@ -43,12 +43,11 @@ export class PaymentsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'PaymentsService.createPayment',
+      this.errorsService.createAppError({
+        action: 'PaymentsService.createPayment',
         error,
-        newPayment,
-      );
+        model: newPayment,
+      });
 
       throw new InternalServerErrorException();
     }
@@ -73,12 +72,11 @@ export class PaymentsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'PaymentsService.updatePayment',
+      this.errorsService.createAppError({
+        action: 'PaymentsService.updatePayment',
         error,
-        foundPayment,
-      );
+        model: foundPayment,
+      });
 
       throw new InternalServerErrorException();
     }

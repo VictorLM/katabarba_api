@@ -10,7 +10,6 @@ export class AppError {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: false,
-    default: null,
   })
   user: User;
 
@@ -26,7 +25,6 @@ export class AppError {
   @Prop({
     type: {},
     required: false,
-    default: null
   })
   model: any;
 

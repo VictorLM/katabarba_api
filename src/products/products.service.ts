@@ -60,12 +60,11 @@ export class ProductsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ProductsService.getProductsAndQuantitiesById',
+      this.errorsService.createAppError({
+        action: 'ProductsService.getProductsAndQuantitiesById',
         error,
-        productsIdsAndQuanties,
-      );
+        model: productsIdsAndQuanties,
+      });
 
       throw new InternalServerErrorException('Erro ao processar novo pedido. Por favor, tente novamente mais tarde');
     }
@@ -115,15 +114,13 @@ export class ProductsService {
 
     } catch (error) {
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ProductsService.updateProductsStockByOrderProductsAndQuantities',
+      this.errorsService.createAppError({
+        action: 'ProductsService.updateProductsStockByOrderProductsAndQuantities',
         error,
-        orderProductsAndQuantities,
-      );
+        model: orderProductsAndQuantities,
+      });
     }
   }
-
 
   async updateProductsStockFromCanceledOrder(
     orderProductsAndQuantities: ProductFullOrder[],
@@ -140,12 +137,11 @@ export class ProductsService {
 
     } catch (error) {
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ProductsService.updateProductsStockFromCanceledOrder',
+      this.errorsService.createAppError({
+        action: 'ProductsService.updateProductsStockFromCanceledOrder',
         error,
-        orderProductsAndQuantities,
-      );
+        model: orderProductsAndQuantities,
+      });
     }
   }
 

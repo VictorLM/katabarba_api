@@ -31,12 +31,11 @@ export class ChangesService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ChangesService.createChange',
+      this.errorsService.createAppError({
+        action: 'ChangesService.createChange',
         error,
-        newChange,
-      );
+        model: newChange,
+      });
     }
   }
 

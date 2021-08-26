@@ -1,7 +1,7 @@
 import { IsBoolean, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Types } from 'mongoose';
 
-export class AppErrorUpdateDTO {
+export class UpdateAppErrorDTO {
   @IsNotEmpty()
   @IsMongoId()
   readonly errorId: Types.ObjectId;

@@ -30,12 +30,10 @@ export class MercadoPagoService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'MercadoPagoService.constructor',
+      this.errorsService.createAppError({
+        action: 'MercadoPagoService.constructor',
         error,
-        null,
-      );
+      });
       throw new InternalServerErrorException('Erro ao inicializar MercadoPagoService');
     }
   }
@@ -114,12 +112,10 @@ export class MercadoPagoService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'MercadoPagoService.createPreferenceWithOrderId',
+      this.errorsService.createAppError({
+        action: 'MercadoPagoService.createPreferenceWithOrderId',
         error,
-        null,
-      );
+      });
       await order.delete();
       await shipment.delete();
 
@@ -180,12 +176,11 @@ export class MercadoPagoService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'MercadoPagoService.getPaymentData',
+      this.errorsService.createAppError({
+        action: 'MercadoPagoService.getPaymentData',
         error,
-        paymentNotificationDTO,
-      );
+        model: paymentNotificationDTO,
+      });
       throw new InternalServerErrorException();
     }
   }

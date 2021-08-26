@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { EmailsService } from '../emails/emails.service';
 import { ErrorsService } from '../errors/errors.service';
+import { MongoIdDTO } from '../mongoId.dto';
 import { OrderQueryDTO } from '../orders/dtos/order-query.dto';
+import { UpdateShipedOrderDTO } from '../orders/dtos/update-shiped-order.dto';
 import { OrderDocument } from '../orders/models/order.schema';
 import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -29,18 +31,24 @@ export class AdminService {
   async getOrders(
     orderQueryDTO: OrderQueryDTO,
   ): Promise<{
-    orders: OrderDocument[],
     page: number,
-    count: number,
+    limit: number,
+    totalCount: number,
+    orders: OrderDocument[],
    }> {
-    // pagination
-    // order by
-    // where !payed, canceled, etc
+    return await this.ordersService.getOrders(orderQueryDTO);
+  }
 
+  async getOrder(mongoIdDTO: MongoIdDTO): Promise<OrderDocument> {
+    return await this.ordersService.getOrderById(mongoIdDTO.id);
+  }
 
-    const orders = await this.ordersService.getOrders(orderQueryDTO);
-
-    return orders;
+  async updateShipedOrder(
+    mongoIdDTO: MongoIdDTO,
+    updateShipedOrderDTO: UpdateShipedOrderDTO,
+    user: UserDocument,
+  ): Promise<void> {
+    return await this.ordersService.updateShipedOrder(mongoIdDTO, updateShipedOrderDTO, user);
   }
 
 }

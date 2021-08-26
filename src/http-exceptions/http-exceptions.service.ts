@@ -20,12 +20,11 @@ export class HttpExceptionsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'HttpExceptionsService.createAppHttpException',
+      this.errorsService.createAppError({
+        action: 'HttpExceptionsService.createAppHttpException',
         error,
-        newAppHttpException,
-      );
+        model: newAppHttpException,
+      });
     }
 
   }

@@ -66,12 +66,10 @@ export class EmailsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.constructor',
+      this.errorsService.createAppError({
+        action: 'EmailsService.constructor',
         error,
-        null,
-      );
+      });
       throw new InternalServerErrorException(
         'Erro ao inicializar EmailsService.',
       );
@@ -126,12 +124,11 @@ export class EmailsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendEmail',
+      this.errorsService.createAppError({
+        action: 'EmailsService.sendEmail',
         error,
-        newEmail,
-      );
+        model: newEmail,
+      });
     }
   }
 
@@ -283,12 +280,11 @@ export class EmailsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.createEmail',
+      this.errorsService.createAppError({
+        action: 'EmailsService.createEmail',
         error,
-        newEmail,
-      );
+        model: newEmail,
+      });
     }
   }
 
@@ -315,12 +311,11 @@ export class EmailsService {
         err = get(error, 'response.error', null);
       }
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.sendMail',
-        err ? err : error,
-        sendParams,
-        );
+      this.errorsService.createAppError({
+        action: 'EmailsService.sendMail',
+        error: err ? err : error,
+        model: sendParams,
+      });
       return EmailStatuses.error;
     }
   }
@@ -336,12 +331,11 @@ export class EmailsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.createEmailEvents',
+      this.errorsService.createAppError({
+        action: 'EmailsService.createEmailEvents',
         error,
-        createEmailEventsDTO,
-      );
+        model: createEmailEventsDTO,
+      });
     }
   }
 
@@ -404,12 +398,11 @@ export class EmailsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.resendEmail',
+      this.errorsService.createAppError({
+        action: 'EmailsService.resendEmail',
         error,
-        email,
-      );
+        model: email,
+      });
     }
   }
 
@@ -461,17 +454,17 @@ export class EmailsService {
       });
 
       try {
-      await newProductAvailableNotification.save();
+        await newProductAvailableNotification.save();
 
-    } catch (error) {
-      console.log(error);
-      // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'EmailsService.createProductAvailableNotification',
-        error,
-        newProductAvailableNotification,
-        );
+      } catch (error) {
+        console.log(error);
+        // Log error into DB - not await
+        this.errorsService.createAppError({
+          action: 'EmailsService.createProductAvailableNotification',
+          error,
+          model: newProductAvailableNotification,
+        });
+        throw new InternalServerErrorException('Erro ao criar alerta de produto. Por favor, tente novamente mais tarde');
       }
     }
 

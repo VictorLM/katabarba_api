@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AppErrorUpdateDTO } from './dtos/app-error-update.dto';
+import { CreateAppErrorDTO } from './dtos/create-app-error.dto';
+import { UpdateAppErrorDTO } from './dtos/update-app-error.dto';
 import { AppError, AppErrorDocument } from './models/app-error.schema';
 
 @Injectable()
@@ -25,18 +26,8 @@ export class ErrorsService {
     return await this.errorsModel.find({ checked: null });
   }
 
-  async createAppError(
-    userId: Types.ObjectId | null,
-    action: string,
-    error: unknown,
-    model: any,
-  ): Promise<void> {
-    const newAppError = new this.errorsModel({
-      user: userId,
-      action,
-      error,
-      model,
-    });
+  async createAppError(createAppErrorDTO: CreateAppErrorDTO): Promise<void> {
+    const newAppError = new this.errorsModel(createAppErrorDTO);
     // Se der erro nesse try, lascou
     try {
       await newAppError.save();
@@ -46,24 +37,23 @@ export class ErrorsService {
   }
 
   async updateAppError(
-    appErrorUpdateDTO: AppErrorUpdateDTO,
+    updateAppErrorDTO: UpdateAppErrorDTO,
   ): Promise<void> {
-    const foundAppError = await this.getAppErrorById(appErrorUpdateDTO.errorId);
+    const foundAppError = await this.getAppErrorById(updateAppErrorDTO.errorId);
     if(!foundAppError.checked){
-      foundAppError.checked = appErrorUpdateDTO.checked && new Date();
+      foundAppError.checked = updateAppErrorDTO.checked && new Date();
     }
-    foundAppError.notes = appErrorUpdateDTO.notes;
+    foundAppError.notes = updateAppErrorDTO.notes;
     try {
       await foundAppError.save();
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.createAppError(
-        null,
-        'ErrorsService.updateAppError',
+      this.createAppError({
+        action: 'ErrorsService.updateAppError',
         error,
-        foundAppError,
-      );
+        model: foundAppError,
+      });
       throw new InternalServerErrorException('Erro ao atualizar o Erro');
     }
   }

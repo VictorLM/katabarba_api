@@ -27,6 +27,8 @@ import { EmailTypes } from '../emails/enums/email-types.enum';
 import { OrderQueryDTO } from './dtos/order-query.dto';
 import { OrderBy } from '../admin/enum/order-by.enum';
 import { UsersService } from '../users/users.service';
+import { MongoIdDTO } from '../mongoId.dto';
+import { UpdateShipedOrderDTO } from './dtos/update-shiped-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -42,25 +44,38 @@ export class OrdersService {
     private usersService: UsersService,
   ) {}
 
-  // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOO - PAGINATION, TOTALCOUNT
   async getOrders(
     orderQueryDTO: OrderQueryDTO,
-    ): Promise<{
-      orders: OrderDocument[],
+  ): Promise<{
       page: number,
-      count: number,
+      limit: number,
+      totalCount: number,
+      orders: OrderDocument[],
      }> {
     const { orderBy, orderStatus, customerEmail, orderDate } = orderQueryDTO;
 
+    let page = 1;
+    if(!Number.isNaN(Number(orderQueryDTO.page)) && Number(orderQueryDTO.page) > 0) {
+      page = Number(orderQueryDTO.page);
+    }
+
+    let limit = 10; // Min
+    if(!Number.isNaN(Number(orderQueryDTO.limit)) && Number(orderQueryDTO.limit) > 10) {
+      limit = Number(orderQueryDTO.limit);
+    }
+
     const query = this.ordersModel.find().populate('user payment');
+    const totalCountQuery = this.ordersModel.find();
 
     if(customerEmail) {
       const user = await this.usersService.getUserByEmail(customerEmail);
       query.where('user', user._id);
+      totalCountQuery.where('user', user._id);
     }
 
     if(orderStatus) {
       query.where('status', orderStatus);
+      totalCountQuery.where('status', orderStatus);
     }
 
     if(orderDate) {
@@ -73,6 +88,11 @@ export class OrdersService {
         $gte: date,
         $lt: datePusOneDay,
       });
+
+      totalCountQuery.where('createdAt', {
+        $gte: date,
+        $lt: datePusOneDay,
+      });
     }
 
     if(orderBy && orderBy === OrderBy.DATE_DESC) {
@@ -81,15 +101,42 @@ export class OrdersService {
       query.sort('1');
     }
 
-    const orders = await query.exec();
-    return { orders, page: 1, count: 10 };
+    const totalCount = await totalCountQuery.countDocuments();
+
+    if(page > Math.ceil(totalCount / page) || limit > totalCount) {
+      page = 1;
+    }
+
+    try {
+      const orders = await query.skip((page - 1) * limit).limit(limit).exec();
+      return { page, limit, totalCount, orders };
+
+    } catch (error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError({
+        action: 'OrdersService.getOrders',
+        error,
+        model: query,
+      });
+      throw new InternalServerErrorException('Erro ao pesquisar pedidos. Por favor, tente novamente mais tarde');
+    }
+
+  }
+
+  async updateShipedOrder(
+    mongoIdDTO: MongoIdDTO,
+    updateShipedOrderDTO: UpdateShipedOrderDTO,
+    user: UserDocument,
+  ): Promise<void> {
+    // TODO
   }
 
   async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
-    const foundOrder = await this.ordersModel.findById(id);
+    const foundOrder = await this.ordersModel.findById(id).populate('payment user');
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
@@ -227,12 +274,12 @@ export class OrdersService {
       await shipment.delete();
 
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        user._id,
-        'OrdersService.createOrder',
+      this.errorsService.createAppError({
+        user: user._id,
+        action: 'OrdersService.createOrder',
         error,
-        newOrder,
-      );
+        model: newOrder,
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar novo pedido. Por favor, tente novamente mais tarde',
@@ -304,12 +351,11 @@ export class OrdersService {
 
     } catch(error) {
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'OrdersService.updateOrderWithMpPreferenceId',
+      this.errorsService.createAppError({
+        action: 'OrdersService.updateOrderWithMpPreferenceId',
         error,
-        order,
-      );
+        model: order,
+      });
     }
   }
 
@@ -340,12 +386,11 @@ export class OrdersService {
 
     } catch(error) {
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'OrdersService.updateOrderWithPaymentData',
+      this.errorsService.createAppError({
+        action: 'OrdersService.updateOrderWithPaymentData',
         error,
-        foundOrder,
-      );
+        model: foundOrder,
+      });
 
       throw new InternalServerErrorException();
     }

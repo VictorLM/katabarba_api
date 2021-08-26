@@ -67,12 +67,12 @@ export class AddressesService {
       } catch (error) {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          user._id,
-          'AddressesService.createAddress',
+        this.errorsService.createAppError({
+          user: user._id,
+          action: 'AddressesService.createAddress',
           error,
-          newAddress,
-        );
+          model: newAddress,
+        });
 
         throw new InternalServerErrorException(
           'Erro ao salvar novo Endereço. Por favor, tente novamente mais tarde',
@@ -111,12 +111,12 @@ export class AddressesService {
         console.log(error);
 
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          user._id,
-          'AddressesService.updateAddress',
+        this.errorsService.createAppError({
+          user: user._id,
+          action: 'AddressesService.updateAddress',
           error,
-          foundAddress,
-        );
+          model: foundAddress,
+        });
 
         throw new InternalServerErrorException(
           'Erro ao atualizar Endereço. Por favor, tente novamente mais tarde',

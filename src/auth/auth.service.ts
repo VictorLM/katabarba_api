@@ -88,12 +88,11 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.createLogin',
+      this.errorsService.createAppError({
+        action: 'AuthService.createLogin',
         error,
-        newLogin,
-      );
+        model: newLogin,
+      });
     }
   }
 
@@ -154,12 +153,12 @@ export class AuthService {
       } catch(error) {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          userId,
-          'AuthService.passwordReset',
+        this.errorsService.createAppError({
+          user: userId,
+          action: 'AuthService.passwordReset',
           error,
-          passwordResetDTO,
-        );
+          model: passwordResetDTO,
+        });
         throw new InternalServerErrorException(
           'Erro ao processar a recuperação de senha. Por favor, tente novamente mais tarde',
         );
@@ -180,12 +179,11 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.createPasswordResetToken',
+      this.errorsService.createAppError({
+        action: 'AuthService.createPasswordResetToken',
         error,
-        createPasswordResetTokenDTO,
-      );
+        model: createPasswordResetTokenDTO,
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar a recuperação de senha. Por favor, tente novamente mais tarde',
@@ -200,12 +198,11 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.getPasswordResetTokenByUser',
+      this.errorsService.createAppError({
+        action: 'AuthService.getPasswordResetTokenByUser',
         error,
-        user,
-      );
+        model: user,
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar a recuperação de senha. Por favor, tente novamente mais tarde',
@@ -222,12 +219,10 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.hashPassword',
+      this.errorsService.createAppError({
+        action: 'AuthService.hashPassword',
         error,
-        null,
-      );
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar a senha. Por favor, tente novamente mais tarde',
@@ -245,12 +240,10 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.passwordCompare',
+      this.errorsService.createAppError({
+        action: 'AuthService.passwordCompare',
         error,
-        null,
-      );
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar a senha. Por favor, tente novamente mais tarde',
@@ -267,12 +260,11 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.hashToken',
+      this.errorsService.createAppError({
+        action: 'AuthService.hashToken',
         error,
-        { token },
-      );
+        model: { token },
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar token. Por favor, tente novamente mais tarde',
@@ -290,12 +282,10 @@ export class AuthService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'AuthService.tokenCompare',
+      this.errorsService.createAppError({
+        action: 'AuthService.tokenCompare',
         error,
-        null,
-      );
+      });
 
       throw new InternalServerErrorException(
         'Erro ao processar token. Por favor, tente novamente mais tarde',

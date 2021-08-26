@@ -78,12 +78,11 @@ export class ShipmentsService {
     } catch(error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ShipmentsService.createShipment',
+      this.errorsService.createAppError({
+        action: 'ShipmentsService.createShipment',
         error,
-        newShipment,
-      );
+        model: newShipment,
+      });
       throw new InternalServerErrorException('Erro ao criar Remessa. Por favor, tente novamente mais tarde');
     }
 
@@ -243,12 +242,11 @@ export class ShipmentsService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        null,
-        'ShipmentsService.getShipmentCostAndDeadlineFromCorreiosByType',
+      this.errorsService.createAppError({
+        action: 'ShipmentsService.getShipmentCostAndDeadlineFromCorreiosByType',
         error,
-        params,
-      );
+        model: params,
+      });
 
       if (error.response) {
         // The request was made and the server responded with a status code

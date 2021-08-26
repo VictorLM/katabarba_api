@@ -87,7 +87,7 @@ export class UsersService {
     });
 
     if (!foundUser) {
-      throw new NotFoundException(`Usuário com o email ${email} não encontrado`);
+      throw new NotFoundException(`Nenhum usuário com o email ${email} foi encontrado`);
     }
 
     return foundUser
@@ -118,12 +118,11 @@ export class UsersService {
       } else {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          null,
-          'UsersService.createUser',
+        this.errorsService.createAppError({
+          action: 'UsersService.createUser',
           error,
-          newUser,
-        );
+          model: newUser,
+        });
         throw new InternalServerErrorException('Erro ao cadastrar usuário. Por favor, tente novamente mais tarde');
       }
     }
@@ -155,12 +154,12 @@ export class UsersService {
       } else {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          user._id,
-          'UsersService.updateUser',
+        this.errorsService.createAppError({
+          user: user._id,
+          action: 'UsersService.updateUser',
           error,
-          foundUser,
-        );
+          model: foundUser,
+        });
         throw new InternalServerErrorException(
           'Erro ao atualizar Usuário. Por favor, tente novamente mais tarde',
         );
@@ -190,12 +189,12 @@ export class UsersService {
       } catch (error) {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          user._id,
-          'UsersService.updateUserPassword',
+        this.errorsService.createAppError({
+          user: user._id,
+          action: 'UsersService.updateUserPassword',
           error,
-          foundUser,
-        );
+          model: foundUser,
+        });
         throw new InternalServerErrorException(
           'Erro ao alterar senha. Por favor, tente novamente mais tarde',
         );
@@ -218,12 +217,12 @@ export class UsersService {
     } catch (error) {
       console.log(error);
       // Log error into DB - not await
-      this.errorsService.createAppError(
-        user._id,
-        'UsersService.resetUserPassword',
+      this.errorsService.createAppError({
+        user: user._id,
+        action: 'UsersService.resetUserPassword',
         error,
-        user,
-      );
+        model: user,
+      });
       throw new InternalServerErrorException(
         'Erro ao redefinir senha. Por favor, tente novamente mais tarde',
       );

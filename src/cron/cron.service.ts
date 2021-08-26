@@ -41,12 +41,10 @@ export class CronService {
       } catch (error) {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          null,
-          'CronService.sendNotCheckedErrorsEmail',
+        this.errorsService.createAppError({
+          action: 'CronService.sendNotCheckedErrorsEmail',
           error,
-          null,
-        );
+        });
       }
     } else {
       console.log('Nenhum erro não tratado foi encontrado');
@@ -73,22 +71,20 @@ export class CronService {
           } else {
             console.log(`Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque: ${pAN}`);
             // Log error into DB - not await
-            this.errorsService.createAppError(
-              null,
-              'CronService.sendProductAvailableNotificationEmail',
-              { message: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque' },
-              pAN,
-            );
+            this.errorsService.createAppError({
+              action: 'CronService.sendProductAvailableNotificationEmail',
+              error: { message: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto sem estoque' },
+              model: pAN,
+            });
           }
         } else {
           console.log(`Erro ao Enviar notificação de produto que voltou ao estoque. Produto inexistente: ${pAN}`);
           // Log error into DB - not await
-          this.errorsService.createAppError(
-            null,
-            'CronService.sendProductAvailableNotificationEmail',
-            { error: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto inexistente' },
-            pAN,
-          );
+          this.errorsService.createAppError({
+            action: 'CronService.sendProductAvailableNotificationEmail',
+            error: { error: 'Erro ao Enviar notificação de produto que voltou ao estoque. Produto inexistente' },
+            model: pAN,
+          });
         }
       });
     } else {
@@ -124,12 +120,10 @@ export class CronService {
         } catch (error) {
           console.log(error);
           // Log error into DB - not await
-          this.errorsService.createAppError(
-            null,
-            'CronService.sendOrderPaymentConflictEmail',
+          this.errorsService.createAppError({
+            action: 'CronService.sendOrderPaymentConflictEmail',
             error,
-            null,
-          );
+          });
         }
       } else {
         console.log('Nenhum conflito de valores dos Pedidos x Pagamentos encontrado');
@@ -194,12 +188,10 @@ export class CronService {
       } catch (error) {
         console.log(error);
         // Log error into DB - not await
-        this.errorsService.createAppError(
-          null,
-          'CronService.resendEmailsWithErrors',
+        this.errorsService.createAppError({
+          action: 'CronService.resendEmailsWithErrors',
           error,
-          null,
-        );
+        });
       }
     } else {
       console.log('Nenhum e-mail com erro encontrado');
