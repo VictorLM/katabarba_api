@@ -3,7 +3,7 @@ import { EmailsService } from '../emails/emails.service';
 import { ErrorsService } from '../errors/errors.service';
 import { MongoIdDTO } from '../mongoId.dto';
 import { OrderQueryDTO } from '../orders/dtos/order-query.dto';
-import { UpdateShipedOrderDTO } from '../orders/dtos/update-shiped-order.dto';
+import { UpdateOrderDTO } from '../orders/dtos/update-order.dto';
 import { OrderDocument } from '../orders/models/order.schema';
 import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -45,10 +45,10 @@ export class AdminService {
 
   async updateShipedOrder(
     mongoIdDTO: MongoIdDTO,
-    updateShipedOrderDTO: UpdateShipedOrderDTO,
+    updateOrderDTO: UpdateOrderDTO,
     user: UserDocument,
   ): Promise<void> {
-    return await this.ordersService.updateShipedOrder(mongoIdDTO, updateShipedOrderDTO, user);
+    return await this.ordersService.updateOrder(mongoIdDTO, updateOrderDTO, user);
   }
 
 }

@@ -7,3 +7,12 @@ export enum OrderStatuses {
   CANCELED = 'CANCELED',
   DONE = 'DONE',
 }
+// TODO - EMITINDO NF?
+
+export enum UpdateOrderStatuses {
+  PROCESSING = 'PROCESSING',
+  PREPARING = 'PREPARING',
+  SHIPPED = 'SHIPPED',
+  CANCELED = 'CANCELED',
+  DONE = 'DONE',
+}

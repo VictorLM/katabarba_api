@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { MongoIdDTO } from '../mongoId.dto';
 import { OrderQueryDTO } from '../orders/dtos/order-query.dto';
-import { UpdateShipedOrderDTO } from '../orders/dtos/update-shiped-order.dto';
+import { UpdateOrderDTO } from '../orders/dtos/update-order.dto';
 import { OrderDocument } from '../orders/models/order.schema';
 import { GetUser } from '../users/decorators/get-user.decorator';
 import { UserDocument } from '../users/models/user.schema';
@@ -37,10 +37,10 @@ export class AdminController {
   @Post('/orders/:id/shiped-order')
   updateShipedOrder(
     @Param() mongoIdDTO: MongoIdDTO,
-    @Body() updateShipedOrderDTO: UpdateShipedOrderDTO,
+    @Body() updateOrderDTO: UpdateOrderDTO,
     @GetUser() user: UserDocument,
   ): Promise<void> {
-    return this.adminService.updateShipedOrder(mongoIdDTO, updateShipedOrderDTO, user);
+    return this.adminService.updateShipedOrder(mongoIdDTO, updateOrderDTO, user);
   }
 
 }

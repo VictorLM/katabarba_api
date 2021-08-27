@@ -92,7 +92,12 @@ export class AddressesService {
 
     if(foundAddress) {
       // Log changes into DB - not awaiting
-      this.changesService.createChange('addresses', 'Address Update', { ...foundAddress }, user._id);
+      this.changesService.createChange({
+        collectionName: 'addresses',
+        type: 'Address Update',
+        beforeDoc: { ...foundAddress },
+        user: user._id,
+      });
 
       const { street, number, district, complement, city, state, zipCode } = addressDto;
 

@@ -134,7 +134,12 @@ export class UsersService {
   ): Promise<void> {
     const foundUser = await this.getUserById(user._id);
     // Log changes into DB - not awaiting
-    this.changesService.createChange('users', 'User Update', { ...foundUser }, user._id);
+    this.changesService.createChange({
+      collectionName: 'users',
+      type: 'User Update',
+      beforeDoc: { ...foundUser },
+      user: user._id,
+    });
 
     const { cpf, email, name, surname, phone } = userBaseDto;
 
@@ -179,7 +184,12 @@ export class UsersService {
     if (await this.authService.passwordCompare(currentPassword, foundUser.password)) {
 
       // Log changes into DB - not awaiting
-      this.changesService.createChange('users', 'User Password Update', { ...foundUser }, user._id);
+      this.changesService.createChange({
+        collectionName: 'users',
+        type: 'User Password Update',
+        beforeDoc: { ...foundUser },
+        user: user._id,
+      });
 
       foundUser.password = await this.authService.hashPassword(newPassword);
 
@@ -209,7 +219,12 @@ export class UsersService {
     password: string,
   ): Promise<void> {
     // Log changes into DB - not awaiting
-    this.changesService.createChange('users', 'User Password Reset', { ...user }, user._id);
+    this.changesService.createChange({
+      collectionName: 'users',
+      type: 'User Password Reset',
+      beforeDoc: { ...user },
+      user: user._id,
+    });
     user.password = await this.authService.hashPassword(password);
     try {
       await user.save();

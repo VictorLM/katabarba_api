@@ -1,12 +1,14 @@
 import {
+  BadRequestException,
   forwardRef,
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CompaniesService } from '../companies/companies.service';
 import { CreateShipmentDTO, PublicGetShipmentCostsDTO } from './dtos/shipment.dto';
 import { Shipment, ShipmentDocument } from './models/shipment.schema';
@@ -41,6 +43,37 @@ export class ShipmentsService {
     private ordersService: OrdersService,
     private errorsService: ErrorsService,
   ) {}
+
+  async getShipmentById(id: Types.ObjectId): Promise<ShipmentDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`ID de Remessa "${id}" inválido`);
+    }
+    const foundShipment = await this.shipmentsModel.findById(id);
+    if (!foundShipment) {
+      throw new NotFoundException(`Remessa com ID "${id}" não encontrado`);
+    }
+    return foundShipment;
+  }
+
+  async updateShipedShipmentById(id: Types.ObjectId, trackingCode: string): Promise<void> {
+    const foundShipment = await this.getShipmentById(id);
+    foundShipment.shipped = new Date();
+    foundShipment.trackingCode = trackingCode;
+
+    try {
+      await foundShipment.save();
+
+    } catch(error) {
+      console.log(error);
+      // Log error into DB - not await
+      this.errorsService.createAppError({
+        action: 'ShipmentsService.updateShipedShipmentById',
+        error,
+        model: foundShipment,
+      });
+      throw new InternalServerErrorException('Erro ao atualizar Remessa. Por favor, tente novamente mais tarde');
+    }
+  }
 
   async createShipment(createShipmentDTO: CreateShipmentDTO): Promise<ShipmentDocument> {
     const { deliveryAddress, shippingCompany, shippingType, productsAndQuantities } = createShipmentDTO;

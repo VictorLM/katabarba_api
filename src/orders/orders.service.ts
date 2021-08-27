@@ -10,7 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ProductsService } from '../products/products.service';
 import { UserDocument } from '../users/models/user.schema';
-import { OrderStatuses } from './enums/order-statuses.enum';
+import { OrderStatuses, UpdateOrderStatuses } from './enums/order-statuses.enum';
 import { Order, OrderDocument } from './models/order.schema';
 import { CreateOrderDto } from './dtos/order.dto';
 import { OrderBoxDimensions } from './interfaces/order-dimensions.interface';
@@ -28,7 +28,8 @@ import { OrderQueryDTO } from './dtos/order-query.dto';
 import { OrderBy } from '../admin/enum/order-by.enum';
 import { UsersService } from '../users/users.service';
 import { MongoIdDTO } from '../mongoId.dto';
-import { UpdateShipedOrderDTO } from './dtos/update-shiped-order.dto';
+import { UpdateOrderDTO } from './dtos/update-order.dto';
+import { ChangesService } from '../changes/changes.service';
 
 @Injectable()
 export class OrdersService {
@@ -42,6 +43,7 @@ export class OrdersService {
     private errorsService: ErrorsService,
     private emailsService: EmailsService,
     private usersService: UsersService,
+    private changesService: ChangesService,
   ) {}
 
   async getOrders(
@@ -124,12 +126,49 @@ export class OrdersService {
 
   }
 
-  async updateShipedOrder(
+  async updateOrder(
     mongoIdDTO: MongoIdDTO,
-    updateShipedOrderDTO: UpdateShipedOrderDTO,
+    updateOrderDTO: UpdateOrderDTO,
     user: UserDocument,
   ): Promise<void> {
-    // TODO
+    const foundOrder = await this.getOrderById(mongoIdDTO.id);
+
+    // Log changes into DB - not awaiting
+    this.changesService.createChange({
+      collectionName: 'orders',
+      type: 'Order Update',
+      beforeDoc: { ...foundOrder },
+      user: user._id,
+    });
+
+    foundOrder.status = OrderStatuses[updateOrderDTO.status];
+
+    if(updateOrderDTO.status === UpdateOrderStatuses.SHIPPED && updateOrderDTO.trackingCode) {
+      await this.shipmentsService.updateShipedShipmentById(
+        Types.ObjectId(String(foundOrder.shipment)), // GAMB
+        updateOrderDTO.trackingCode,
+      );
+    }
+
+    try {
+      await foundOrder.save();
+
+    } catch (error) {
+      console.log(error);
+
+      // Log error into DB - not await
+      this.errorsService.createAppError({
+        user: user._id,
+        action: 'OrdersService.updateOrder',
+        error,
+        model: foundOrder,
+      });
+
+      throw new InternalServerErrorException(
+        'Erro ao atualizar pedido. Por favor, tente novamente mais tarde',
+      );
+    }
+
   }
 
   async getOrderById(id: Types.ObjectId): Promise<OrderDocument> {

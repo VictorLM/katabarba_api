@@ -11,9 +11,11 @@ import { MercadoPagoModule } from '../mercado-pago/mercado-pago.module';
 import { ErrorsModule } from '../errors/errors.module';
 import { EmailsModule } from '../emails/emails.module';
 import { UsersModule } from '../users/users.module';
+import { ChangesModule } from '../changes/changes.module';
 
 @Module({
   imports: [
+    ChangesModule,
     UsersModule,
     EmailsModule,
     ErrorsModule,
