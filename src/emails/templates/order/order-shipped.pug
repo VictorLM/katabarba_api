@@ -1,0 +1,14 @@
+extends ../base/base.pug
+
+block content
+
+  p(style='font-size: 1.5rem;') Olá, #{order.user.name}! Tudo bem?
+  p(style='font-size: 1.5rem;') Só para avisar que seu pedido já foi enviado. Seu código de rastreamento é:
+
+  h2(style='text-align: center;') #{order.shipment.trackingCode}
+
+  p Em algumas horas você poderá acompanhar sua encomenda pelo #[a(href='https://www2.correios.com.br/sistemas/rastreamento/' target='_blank' rel='noopener noreferrer') site dos Correios].
+
+  include order-status/order-status.pug
+
+  include order-details/order-details.pug

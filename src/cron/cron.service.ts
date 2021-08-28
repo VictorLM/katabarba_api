@@ -145,7 +145,7 @@ export class CronService {
             emailWithError.type === EmailTypes.ORDER_SHIPPED ||
             emailWithError.type === EmailTypes.ORDER_PAYMENT_REMINDER
           ) {
-            const order = await this.ordersService.getOrderById(emailWithError.relatedTo);
+            const order = await this.ordersService.getOrderByIdAndPopulate(emailWithError.relatedTo);
 
             if(order.status === OrderStatuses.CANCELED) {
               emailWithError.status = EmailStatuses.expired;

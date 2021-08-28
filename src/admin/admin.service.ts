@@ -22,10 +22,6 @@ export class AdminService {
     private ordersService: OrdersService,
   ) {}
 
-  // test(user: UserDocument): string {
-  //   return 'test';
-  // }
-
   // ORDERS
 
   async getOrders(
@@ -40,7 +36,7 @@ export class AdminService {
   }
 
   async getOrder(mongoIdDTO: MongoIdDTO): Promise<OrderDocument> {
-    return await this.ordersService.getOrderById(mongoIdDTO.id);
+    return await this.ordersService.getOrderByIdAndPopulate(mongoIdDTO.id);
   }
 
   async updateShipedOrder(

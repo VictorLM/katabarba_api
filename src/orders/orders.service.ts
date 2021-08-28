@@ -30,6 +30,7 @@ import { UsersService } from '../users/users.service';
 import { MongoIdDTO } from '../mongoId.dto';
 import { UpdateOrderDTO } from './dtos/update-order.dto';
 import { ChangesService } from '../changes/changes.service';
+import { get } from 'lodash';
 
 @Injectable()
 export class OrdersService {
@@ -131,7 +132,7 @@ export class OrdersService {
     updateOrderDTO: UpdateOrderDTO,
     user: UserDocument,
   ): Promise<void> {
-    const foundOrder = await this.getOrderById(mongoIdDTO.id);
+    const foundOrder = await this.getOrderByIdAndPopulate(mongoIdDTO.id);
 
     // Log changes into DB - not awaiting
     this.changesService.createChange({
@@ -145,9 +146,17 @@ export class OrdersService {
 
     if(updateOrderDTO.status === UpdateOrderStatuses.SHIPPED && updateOrderDTO.trackingCode) {
       await this.shipmentsService.updateShipedShipmentById(
-        Types.ObjectId(String(foundOrder.shipment)), // GAMB
+        get(foundOrder, 'shipment._id', null), // GAMB POR QUE VEM POPULATED
         updateOrderDTO.trackingCode,
       );
+      foundOrder.shipment.trackingCode = updateOrderDTO.trackingCode; // para ir no e-mail
+      // Send email - not await
+      this.emailsService.sendEmail({
+        document: foundOrder,
+        type: EmailTypes.ORDER_SHIPPED,
+        recipients: foundOrder.user,
+        relatedTo: foundOrder._id,
+      });
     }
 
     try {
@@ -155,7 +164,6 @@ export class OrdersService {
 
     } catch (error) {
       console.log(error);
-
       // Log error into DB - not await
       this.errorsService.createAppError({
         user: user._id,
@@ -163,7 +171,6 @@ export class OrdersService {
         error,
         model: foundOrder,
       });
-
       throw new InternalServerErrorException(
         'Erro ao atualizar pedido. Por favor, tente novamente mais tarde',
       );
@@ -175,18 +182,18 @@ export class OrdersService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
-    const foundOrder = await this.ordersModel.findById(id).populate('payment user');
+    const foundOrder = await this.ordersModel.findById(id);
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
     return foundOrder;
   }
 
-  async getOrderByIdAndPopulateUserAndShipment(id: Types.ObjectId): Promise<OrderDocument> {
+  async getOrderByIdAndPopulate(id: Types.ObjectId): Promise<OrderDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException(`ID do Pedido "${id}" inválido`);
     }
-    const foundOrder = await this.ordersModel.findById(id).populate('user').populate('shipment');
+    const foundOrder = await this.ordersModel.findById(id).populate('payment user shipment');
     if (!foundOrder) {
       throw new NotFoundException(`Pedido com ID "${id}" não encontrado`);
     }
@@ -400,7 +407,7 @@ export class OrdersService {
 
   async updateOrderWithPaymentData(payment: PaymentDocument): Promise<void> {
     // GAMB VIOLENTA - Não sei porque o type do campo Order está pegando o Objeto não o ObjectId
-    const foundOrder = await this.getOrderByIdAndPopulateUserAndShipment(
+    const foundOrder = await this.getOrderByIdAndPopulate(
       Types.ObjectId(String(payment.order)),
     );
     // Pode ser que o primeiro pagamento seja rejeitado e um segundo aprovado

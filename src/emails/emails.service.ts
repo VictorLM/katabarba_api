@@ -202,7 +202,6 @@ export class EmailsService {
     order: OrderDocument, // populated
     ): string {
     if (email.type === EmailTypes.ORDER_CREATE) {
-      // return getCreateOrderHTML(order);
       return pug.renderFile(`${__dirname}/templates/order/order-create.pug`, {
         title: EmailSubjects.ORDER_CREATE,
         appUrl: this.configService.get('APP_URL'),
@@ -210,7 +209,6 @@ export class EmailsService {
       });
 
     } else if (email.type === EmailTypes.ORDER_PAYED) {
-      // return getPayedOrderHTML(order);
       return pug.renderFile(`${__dirname}/templates/order/order-payed.pug`, {
         title: EmailSubjects.ORDER_CREATE,
         appUrl: this.configService.get('APP_URL'),
@@ -218,9 +216,14 @@ export class EmailsService {
       });
 
     } else if (email.type === EmailTypes.ORDER_SHIPPED) {
-      // TODO - A Order tem que vir com o Shipment populated
-      return getShippedOrderHTML(order);
+      return pug.renderFile(`${__dirname}/templates/order/order-shipped.pug`, {
+        title: EmailSubjects.ORDER_SHIPPED,
+        appUrl: this.configService.get('APP_URL'),
+        order,
+      });
+
     } else if (email.type === EmailTypes.ORDER_PAYMENT_REMINDER) {
+      // TODO - PUG
       return getOrderPaymentReminderHTML(
         order,
         this.configService.get('APP_URL'),
