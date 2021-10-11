@@ -11,7 +11,7 @@ export class SiteService {
   ) {}
 
   async getTexts(): Promise<TextDocument[]> {
-    return this.textsModel.find();
+    return await this.textsModel.find();
   }
     // async createText(createTextDto: CreateTextDto): Promise<Text> {
   //   const { section, title, text } = createTextDto;

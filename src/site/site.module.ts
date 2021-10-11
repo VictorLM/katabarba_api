@@ -5,9 +5,11 @@ import { SiteService } from './site.service';
 import { Text, TextSchema } from './models/text.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([
-    { name: Text.name, schema: TextSchema },
-  ]),],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Text.name, schema: TextSchema },
+    ]),
+  ],
   providers: [SiteService],
   controllers: [SiteController],
 })

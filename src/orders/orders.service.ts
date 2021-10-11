@@ -99,9 +99,9 @@ export class OrdersService {
     }
 
     if(orderBy && orderBy === OrderBy.DATE_DESC) {
-      query.sort('-1');
+      query.sort({ createdAt: -1 });
     } else {
-      query.sort('1');
+      query.sort({ createdAt: -1 });
     }
 
     const totalCount = await totalCountQuery.countDocuments();
