@@ -1,5 +1,6 @@
 <h2 align="center">
 	🚧  [PT] Projeto interrompido  🚧
+  <br/>
   🚧  [EN] Project canceled  🚧
 </h2>
 
