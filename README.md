@@ -1,12 +1,13 @@
-<h1 align="center">
-	🚧  Projeto interrompido. Project canceled.  🚧
-</h1>
+<h2 align="center">
+	🚧  [PT] Projeto interrompido  🚧
+  🚧  [EN] Project canceled  🚧
+</h2>
 
 <h1 align="center" style="border-bottom: none">
-  KataBarba - E-commerce
+  KataBarba - E-commerce API
 </h1>
 
-<h1>Descrição</h1>
+<h1 id="descricao">Descrição</h1>
 
 <p>
   E-commerce API com NestJS e MongoDB. API da Loja virtual e site do produto KataBarba - Capa para se barbear.
@@ -16,12 +17,13 @@
 
 <!--ts-->
    * [Tabela de Conteúdo](#tabela-de-conteudo)
+   * [Descrição](#descricao)
    * [Tecnologias](#tecnologias)
    * [TODO's](#todos)
    * [Autor](#autor)
 <!--te-->
 
-<h1 align="center" id="tecnologias">Tecnologias</h1>
+<h1 id="tecnologias">Tecnologias</h1>
 
 <p>
     As seguintes ferramentas foram usadas na construção deste projeto:
@@ -35,7 +37,7 @@
 - [MercadoPago](https://www.mercadopago.com.br/developers/en/guides/online-payments/checkout-pro/introduction)
 - [Correios WS](https://cws.correios.com.br/)
 
-<h1 align="center" id="todos">TODO's</h1>
+<h1 id="todos">TODO's</h1>
 
 - [ ] Arrumar conflitos última atualização major Mongoose ODM
 - [ ] Finalizar schedule jobs
@@ -53,10 +55,11 @@
 - [ ] Revisada geral na API
 - [ ] Documentação com Swagger e JS Docs
 
-<h1 align="center" id="autor">Autor</h1>
+<h1 id="autor">Autor</h1>
 
 <p>
   Made with ❤️ by <b>Victor Meireles</b> 👋🏽 Get in touch!
+  <br/>
   Feito com ❤️ por <b>Victor Meireles</b> 👋🏽 Entre em contato!
 </p>
 
