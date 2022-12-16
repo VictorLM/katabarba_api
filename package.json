@@ -28,7 +28,7 @@
     "@nestjs/jwt": "^8.0.0",
     "@nestjs/mongoose": "^8.0.0",
     "@nestjs/passport": "^8.0.0",
-    "@nestjs/platform-express": "^8.0.0",
+    "@nestjs/platform-express": "^8.4.7",
     "@nestjs/schedule": "^1.0.1",
     "@types/lodash": "^4.14.172",
     "@types/mercadopago": "^1.5.4",
