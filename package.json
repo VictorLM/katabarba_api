@@ -45,7 +45,7 @@
     "lodash": "^4.17.21",
     "mercadopago": "^1.5.8",
     "mongoose": "^6.4.6",
-    "node-mailjet": "^3.3.4",
+    "node-mailjet": "^3.4.1",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.0",
     "pug": "^3.0.2",
