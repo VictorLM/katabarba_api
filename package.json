@@ -44,7 +44,7 @@
     "fast-xml-parser": "^3.19.0",
     "lodash": "^4.17.21",
     "mercadopago": "^1.5.8",
-    "mongoose": "^6.0.10",
+    "mongoose": "^6.4.6",
     "node-mailjet": "^3.3.4",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",
